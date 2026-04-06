@@ -1,0 +1,433 @@
+import { useEffect, useState } from "react";
+import { MessageSquareText, Pencil, Settings2, Trash2 } from "lucide-react";
+import { backofficeApi } from "../services/backofficeApi.js";
+import { BackofficeDialog, BackofficeListSkeletonLoading } from "../components/index.js";
+import { useAuth } from "../../../contexts/AuthContext.jsx";
+import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
+import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
+
+export function SettingsView() {
+  const { user } = useAuth();
+  const snackbar = useSnackbar();
+  const [settings, setSettings] = useState([]);
+  const [tipoCambio, setTipoCambio] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [tipoCambioInput, setTipoCambioInput] = useState("");
+  const [modalOpen, setModalOpen] = useState(false);
+  const [configForm, setConfigForm] = useState({ clave: "", valor: "", descripcion: "" });
+  const [templates, setTemplates] = useState([]);
+  const [templatesActivas, setTemplatesActivas] = useState("");
+  const [templateModalOpen, setTemplateModalOpen] = useState(false);
+  const [templateForm, setTemplateForm] = useState({
+    id: null,
+    nombre: "",
+    contenido: "",
+    activa: true,
+    predeterminada: false,
+  });
+  const [alertasStockMinimo, setAlertasStockMinimo] = useState(true);
+  const [sonidosNotificacion, setSonidosNotificacion] = useState(true);
+  const [confirmDeleteTemplate, setConfirmDeleteTemplate] = useState({ open: false, id: null });
+
+  const loadAll = async () => {
+    const [config, tc, tmpl] = await Promise.all([
+      backofficeApi.configuraciones(),
+      backofficeApi.configuracionTipoCambio(),
+      backofficeApi.listPlantillasWhatsapp(templatesActivas === "" ? {} : { activas: templatesActivas }),
+    ]);
+    const list = Array.isArray(config) ? config : config?.items || [];
+    setSettings(list);
+    const tcValue = tc?.tipoCambioDolar ?? tc?.TipoCambioDolar ?? tc?.valor ?? null;
+    setTipoCambio(tcValue);
+    setTipoCambioInput(tcValue ?? "");
+    setTemplates(Array.isArray(tmpl) ? tmpl : tmpl?.items || []);
+  };
+
+  useEffect(() => {
+    let mounted = true;
+    loadAll()
+      .catch((e) => mounted && setError(e.message || "No se pudo cargar configuraciones."))
+      .finally(() => mounted && setLoading(false));
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  const reloadTemplates = async (activas = templatesActivas) => {
+    const data = await backofficeApi.listPlantillasWhatsapp(activas === "" ? {} : { activas });
+    setTemplates(Array.isArray(data) ? data : data?.items || []);
+  };
+
+  const saveTipoCambio = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await backofficeApi.updateTipoCambio(Number(tipoCambioInput));
+      await loadAll();
+      snackbar.success("Tipo de cambio actualizado.");
+    } catch (e) {
+      snackbar.error(e.message || "No se pudo actualizar tipo de cambio.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openConfigEditor = (cfg) => {
+    setConfigForm({
+      clave: cfg?.clave || "",
+      valor: cfg?.valor != null ? String(cfg.valor) : "",
+      descripcion: cfg?.descripcion || "",
+    });
+    setModalOpen(true);
+  };
+
+  const saveConfig = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      await backofficeApi.upsertConfiguracion(configForm.clave, configForm.valor, configForm.descripcion);
+      await loadAll();
+      setModalOpen(false);
+      snackbar.success("Configuración guardada.");
+    } catch (e2) {
+      snackbar.error(e2.message || "No se pudo guardar la configuración.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openTemplateCreate = () => {
+    setTemplateForm({
+      id: null,
+      nombre: "",
+      contenido: "",
+      activa: true,
+      predeterminada: false,
+    });
+    setTemplateModalOpen(true);
+  };
+
+  const openTemplateEdit = async (id) => {
+    setSaving(true);
+    setError("");
+    try {
+      const t = await backofficeApi.getPlantillaWhatsapp(id);
+      setTemplateForm({
+        id: t.id,
+        nombre: t.nombre || "",
+        contenido: t.contenido || t.mensaje || "",
+        activa: t.activa !== false,
+        predeterminada: Boolean(t.predeterminada || t.esDefault),
+      });
+      setTemplateModalOpen(true);
+    } catch (e) {
+      setError(e.message || "No se pudo cargar plantilla.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const saveTemplate = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError("");
+    try {
+      const body = {
+        nombre: templateForm.nombre,
+        contenido: templateForm.contenido,
+        activa: Boolean(templateForm.activa),
+      };
+      let templateId = templateForm.id;
+      if (templateForm.id) {
+        await backofficeApi.updatePlantillaWhatsapp(templateForm.id, body);
+      } else {
+        const created = await backofficeApi.createPlantillaWhatsapp(body);
+        templateId = created?.id || created?.plantillaId || null;
+      }
+      if (templateForm.predeterminada && templateId) {
+        await backofficeApi.marcarDefaultPlantillaWhatsapp(templateId);
+      }
+      await reloadTemplates();
+      setTemplateModalOpen(false);
+      snackbar.success("Plantilla guardada.");
+    } catch (e2) {
+      snackbar.error(e2.message || "No se pudo guardar plantilla.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeTemplate = async (id) => {
+    setSaving(true);
+    setError("");
+    try {
+      await backofficeApi.deletePlantillaWhatsapp(id);
+      await reloadTemplates();
+      snackbar.success("Plantilla eliminada.");
+    } catch (e) {
+      snackbar.error(e.message || "No se pudo eliminar plantilla.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const makeDefaultTemplate = async (id) => {
+    setSaving(true);
+    setError("");
+    try {
+      await backofficeApi.marcarDefaultPlantillaWhatsapp(id);
+      await reloadTemplates();
+      snackbar.success("Plantilla marcada como predeterminada.");
+    } catch (e) {
+      snackbar.error(e.message || "No se pudo marcar como predeterminada.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <BackofficeListSkeletonLoading rows={5} />;
+  const normalizedSettings = settings.filter((s) => String(s?.clave || "").toLowerCase() !== "tipocambiodolar");
+  return (
+    <div className="mx-auto min-w-0 max-w-4xl px-2 pb-10 sm:px-4">
+      {/* Header Minimalista */}
+      <header className="mb-8 mt-4 sm:mb-12">
+        <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Ajustes</h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Personaliza el comportamiento de tu sistema y gestiona parámetros globales.
+        </p>
+      </header>
+
+      {error && (
+        <div className="mb-6 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600 animate-in fade-in slide-in-from-top-2">
+          {error}
+        </div>
+      )}
+
+      {/* Secciones en Columnas Limpias */}
+      <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
+        {/* Lado Izquierdo: General y POS */}
+        <div className="space-y-8 md:col-span-12 lg:col-span-7">
+          
+          {/* Perfil y Tipo de Cambio Integrados */}
+          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+                  <span className="text-sm font-bold uppercase">{user?.nombreUsuario?.[0] || user?.usuario?.[0] || "U"}</span>
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">{user?.nombreUsuario || user?.usuario || "Usuario"}</h3>
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{user?.rol || "Admin"}</p>
+                </div>
+              </div>
+            </article>
+
+            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">Tipo de cambio</h3>
+                  <p className="text-[10px] text-slate-400">Actual: {tipoCambio ?? "N/D"}</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    step="0.01"
+                    value={tipoCambioInput}
+                    onChange={(e) => setTipoCambioInput(e.target.value)}
+                    className="w-20 rounded-lg border-slate-200 bg-slate-50 px-2 py-1 text-sm font-bold text-slate-700 focus:bg-white"
+                  />
+                  <button onClick={saveTipoCambio} disabled={saving} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-white transition-opacity disabled:opacity-50">
+                    {saving ? "..." : "OK"}
+                  </button>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          {/* Preferencias de POS */}
+          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <h3 className="mb-5 text-[11px] font-black uppercase tracking-widest text-slate-400">Preferencias del POS</h3>
+            <div className="divide-y divide-slate-100">
+              {[
+                { label: "Alertas Stock Mínimo", desc: "Avisar cuando se agota", state: alertasStockMinimo, setter: setAlertasStockMinimo },
+                { label: "Sonidos de Notificación", desc: "Feedback auditivo (Vol 30%)", state: sonidosNotificacion, setter: setSonidosNotificacion }
+              ].map((pref, i) => (
+                <div key={i} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
+                  <div>
+                    <p className="text-sm font-bold text-slate-800">{pref.label}</p>
+                    <p className="text-xs text-slate-500">{pref.desc}</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => pref.setter(v => !v)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${pref.state ? "bg-slate-900" : "bg-slate-200"}`}
+                  >
+                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${pref.state ? "translate-x-6" : "translate-x-1"}`} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+        </div>
+
+        {/* Lado Derecho: WhatsApp */}
+        <div className="md:col-span-12 lg:col-span-5">
+          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+            <div className="border-b border-slate-100 p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">WhatsApp Marketing</h3>
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Plantillas de Factura</p>
+                </div>
+                <select
+                  value={templatesActivas}
+                  onChange={async (e) => {
+                    const v = e.target.value;
+                    setTemplatesActivas(v);
+                    await reloadTemplates(v);
+                  }}
+                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-600"
+                >
+                  <option value="">Todas</option>
+                  <option value="true">Activas</option>
+                  <option value="false">Inactivas</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Plantillas</p>
+                <button
+                  onClick={openTemplateCreate}
+                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-white active:scale-95 transition-all"
+                >
+                  + NUEVA
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {templates.length === 0 && (
+                  <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
+                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Vacío</p>
+                  </div>
+                )}
+                {templates.map((t, i) => (
+                  <div key={t.id || i} className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-sm">
+                    <div className="mb-3">
+                      <div className="flex items-center justify-between">
+                        <h4 className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
+                          {t.nombre || "Sin Nombre"}
+                          {(t.predeterminada || t.esDefault) && (
+                            <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold text-emerald-600 ring-1 ring-emerald-100">
+                              DEFAULT
+                            </span>
+                          )}
+                        </h4>
+                        <button onClick={() => setConfirmDeleteTemplate({ open: false, id: t.id })} className="text-slate-300 hover:text-red-500">
+                          <Trash2 className="h-4.5 w-4.5" />
+                        </button>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500">
+                        {t.contenido || t.mensaje || "Sin contenido..."}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => openTemplateEdit(t.id)} className="text-[10px] font-bold text-slate-600 hover:text-slate-900">
+                        EDITAR
+                      </button>
+                      <button onClick={() => makeDefaultTemplate(t.id)} className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700">
+                        DEFAULT
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      {modalOpen && (
+        <BackofficeDialog maxWidthClass="max-w-md" onBackdropClick={saving ? undefined : () => setModalOpen(false)}>
+          <form onSubmit={saveConfig} className="w-full min-w-0">
+            <h3 className="text-lg font-semibold text-slate-800">Editar configuración</h3>
+            <div className="mt-4 space-y-3">
+              <input value={configForm.clave} onChange={(e) => setConfigForm((f) => ({ ...f, clave: e.target.value }))} placeholder="Clave" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
+              <input value={configForm.valor} onChange={(e) => setConfigForm((f) => ({ ...f, valor: e.target.value }))} placeholder="Valor" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
+              <textarea value={configForm.descripcion} onChange={(e) => setConfigForm((f) => ({ ...f, descripcion: e.target.value }))} placeholder="Descripción (opcional)" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" rows={3} />
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 sm:w-auto">Cancelar</button>
+              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">{saving ? "Guardando..." : "Guardar"}</button>
+            </div>
+          </form>
+        </BackofficeDialog>
+      )}
+      {templateModalOpen && (
+        <BackofficeDialog maxWidthClass="max-w-lg" onBackdropClick={saving ? undefined : () => setTemplateModalOpen(false)}>
+          <form onSubmit={saveTemplate} className="w-full min-w-0">
+            <h3 className="text-lg font-semibold text-slate-800">{templateForm.id ? "Editar plantilla WhatsApp" : "Nueva plantilla WhatsApp"}</h3>
+            <div className="mt-4 space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Nombre *</label>
+                <input
+                  value={templateForm.nombre}
+                  onChange={(e) => setTemplateForm((f) => ({ ...f, nombre: e.target.value }))}
+                  placeholder="Ej: Plantilla por Defecto"
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Mensaje *</label>
+                <textarea
+                  value={templateForm.contenido}
+                  onChange={(e) => setTemplateForm((f) => ({ ...f, contenido: e.target.value }))}
+                  placeholder={"Hola {NombreCliente},\n\nLe enviamos su factura:\n📄 Factura: {NumeroFactura}\n💰 Monto: C$ {Monto}\n..."}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  rows={8}
+                  required
+                />
+                <p className="mt-1 text-xs text-slate-500">
+                  Usa las variables: {"{NombreCliente}"}, {"{NumeroFactura}"}, {"{Monto}"}, {"{Mes}"}, {"{Categoria}"}, {"{Estado}"}, {"{EnlacePDF}"}
+                </p>
+                <p className="mt-1 text-xs text-primary-700">
+                  Puedes personalizar el mensaje libremente y dejar solo las variables que necesites.
+                </p>
+              </div>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={templateForm.activa} onChange={(e) => setTemplateForm((f) => ({ ...f, activa: e.target.checked }))} />
+                Activa
+              </label>
+              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                <input type="checkbox" checked={templateForm.predeterminada} onChange={(e) => setTemplateForm((f) => ({ ...f, predeterminada: e.target.checked }))} />
+                Marcar como predeterminada
+              </label>
+            </div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setTemplateModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 sm:w-auto">Cancelar</button>
+              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">{saving ? "Guardando..." : "Guardar"}</button>
+            </div>
+          </form>
+        </BackofficeDialog>
+      )}
+      <ConfirmModal
+        open={confirmDeleteTemplate.open}
+        onClose={() => setConfirmDeleteTemplate({ open: false, id: null })}
+        onConfirm={async () => {
+          if (confirmDeleteTemplate.id) await removeTemplate(confirmDeleteTemplate.id);
+        }}
+        title="Eliminar plantilla"
+        message="¿Deseas eliminar esta plantilla de WhatsApp?"
+        confirmLabel="Eliminar"
+        variant="danger"
+        loading={saving}
+      />
+    </div>
+  );
+}

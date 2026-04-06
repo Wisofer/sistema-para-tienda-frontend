@@ -1,0 +1,60 @@
+import React from "react";
+
+/**
+ * Tarjetas de estado superior para el módulo de Caja.
+ */
+export function CashierStatusCards({ 
+  cajaAbierta, 
+  showApertura, 
+  setShowApertura, 
+  showCierreForm, 
+  setShowCierreForm 
+}) {
+  // Estado: Caja Cerrada (Pantalla de bienvenida)
+  if (!cajaAbierta && !showApertura) {
+    return (
+      <article className="rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm animate-in fade-in zoom-in duration-500">
+        <div className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-700">
+          <span>●</span>
+          Estado actual
+        </div>
+        <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-xl">🔒</div>
+        <h2 className="text-2xl font-bold text-slate-900">Caja Cerrada</h2>
+        <p className="mx-auto mt-2 max-w-md text-slate-500">
+          La caja está lista para iniciar. Abre caja para comenzar operaciones del día y habilitar cobros.
+        </p>
+        <div className="mx-auto mt-5 h-px w-24 bg-slate-200" />
+        <button
+          onClick={() => setShowApertura(true)}
+          className="mt-6 rounded-xl bg-slate-900 px-6 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 transition-all active:scale-[0.98]"
+        >
+          Abrir Caja
+        </button>
+      </article>
+    );
+  }
+
+  // Estado: Caja Abierta (Banner informativo)
+  if (cajaAbierta) {
+    return (
+      <article className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 shadow-sm animate-in fade-in slide-in-from-top-2 duration-300">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="text-xl font-bold text-emerald-900">Caja Abierta</h2>
+            <p className="text-sm text-emerald-700 font-medium">Operando correctamente para este día.</p>
+          </div>
+          <button
+            onClick={() => setShowCierreForm(!showCierreForm)}
+            className={`rounded-xl px-5 py-2 text-sm font-bold text-white transition-all active:scale-[0.98] ${
+              showCierreForm ? "bg-slate-800 hover:bg-slate-700" : "bg-red-600 hover:bg-red-700"
+            }`}
+          >
+            {showCierreForm ? "Ocultar formulario" : "Cerrar caja"}
+          </button>
+        </div>
+      </article>
+    );
+  }
+
+  return null;
+}
