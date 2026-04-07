@@ -8,6 +8,9 @@ import { formatCurrency } from "../utils/currency.js";
 const icons = [ClipboardList, BarChart3, CircleDollarSign, Clock3];
 const TOP_PRODUCTS_LIMIT = 3;
 
+/** Debe coincidir con `title` en `setStats` para el bloque «Resumen del día». */
+const RESUMEN_DIA_KEYS = ["Ventas de Hoy", "Ingresos (C$)", "Ticket Promedio", "Ventas del Mes"];
+
 function parseSeriesDate(rawDate) {
   if (!rawDate) return null;
   const asString = String(rawDate).trim();
@@ -128,10 +131,10 @@ export function DashboardView({ currencySymbol = "C$" }) {
       .catch(() => {
         if (!mounted) return;
         setStats([
-          { title: "Ventas hoy", value: "0", detail: "Sin datos" },
-          { title: "Ingresos hoy", value: formatCurrency(0, currencySymbol), detail: "Sin datos" },
-          { title: "Ticket promedio", value: formatCurrency(0, currencySymbol), detail: "Sin datos" },
-          { title: "Ventas Mes", value: formatCurrency(0, currencySymbol), detail: "Sin datos" },
+          { title: "Ventas de Hoy", value: "0", detail: "Sin datos" },
+          { title: "Ingresos (C$)", value: formatCurrency(0, currencySymbol), detail: "Sin datos" },
+          { title: "Ticket Promedio", value: formatCurrency(0, currencySymbol), detail: "Sin datos" },
+          { title: "Ventas del Mes", value: formatCurrency(0, currencySymbol), detail: "Sin datos" },
         ]);
         setSalesSeries([]);
         setSalesByCategory([]);
@@ -170,9 +173,9 @@ export function DashboardView({ currencySymbol = "C$" }) {
         {stats.map((item, idx) => {
           const Icon = icons[idx];
           return (
-            <article key={item.title} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="flex items-center justify-between">
-                <p className="text-sm text-slate-500">{item.title}</p>
+            <article key={item.title} className="min-w-0 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <p className="min-w-0 truncate text-sm text-slate-500">{item.title}</p>
                 <div className="rounded-lg bg-primary-50 p-2 text-primary-600">
                   <Icon className="h-5 w-5" />
                 </div>
@@ -184,140 +187,146 @@ export function DashboardView({ currencySymbol = "C$" }) {
         })}
       </div>
 
-      <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[1.45fr_1fr]">
-        <section className="space-y-4">
-          <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-800">Rendimiento Comercial</h2>
-              <span className="rounded-lg bg-green-100 px-2 py-1 text-xs font-bold text-green-700">En Línea</span>
+      <div className="space-y-4">
+        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="text-base font-semibold text-slate-800">Rendimiento Comercial</h2>
+            <span className="shrink-0 rounded-lg bg-green-100 px-2 py-1 text-xs font-bold text-green-700">En Línea</span>
+          </div>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs text-slate-500">Mes actual</p>
+              <p className="mt-1 text-xl font-bold text-slate-900">{formatCurrency(monthRevenue, currencySymbol)}</p>
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs text-slate-500">Mes actual</p>
-                <p className="mt-1 text-xl font-bold text-slate-900">{formatCurrency(monthRevenue, currencySymbol)}</p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs text-slate-500">Semana</p>
-                <p className="mt-1 text-xl font-bold text-slate-900">{formatCurrency(weekRevenue, currencySymbol)}</p>
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="text-xs text-slate-500">Desde el inicio</p>
-                <p className="mt-1 text-xl font-bold text-slate-900">{formatCurrency(totalIncomeSinceStart, currencySymbol)}</p>
-              </div>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs text-slate-500">Semana</p>
+              <p className="mt-1 text-xl font-bold text-slate-900">{formatCurrency(weekRevenue, currencySymbol)}</p>
             </div>
-          </article>
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="text-xs text-slate-500">Desde el inicio</p>
+              <p className="mt-1 text-xl font-bold text-slate-900">{formatCurrency(totalIncomeSinceStart, currencySymbol)}</p>
+            </div>
+          </div>
+        </article>
 
-          <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Ventas por categoría</p>
-                {salesByCategory.length === 0 ? (
-                  <p className="text-xs text-slate-500">Sin datos de categorías.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {salesByCategory.map((c) => (
-                      <div key={c.name} className="flex items-center justify-between text-sm">
-                        <span className="text-slate-700">{c.name}</span>
-                        <span className="font-semibold text-slate-900">{c.total}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Stock bajo</p>
-                {lowStockProducts.length === 0 ? (
-                  <p className="text-xs text-slate-500">Sin alertas de inventario.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {lowStockProducts.map((p) => (
-                      <div key={p.name} className="flex items-center justify-between text-sm">
-                        <span className="text-slate-700">{p.name}</span>
-                        <span className="font-semibold text-amber-700">
-                          {p.stock}/{p.min}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </article>
-
-          <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-amber-500" />
-              <h2 className="text-base font-semibold text-slate-800">Productos Más Vendidos</h2>
-            </div>
-            <div className="space-y-3">
-              {safeProducts.map((product) => (
-                <div key={product.name} className="flex items-center justify-between rounded-lg bg-slate-50 p-3">
-                  <div className="flex items-center gap-2">
-                    <ShoppingBag className="h-5 w-5 text-slate-500" />
-                    <div>
-                      <p className="text-sm font-medium text-slate-700">{product.name}</p>
-                      <p className="text-xs text-slate-500">{product.sold} vendidos</p>
-                    </div>
-                  </div>
-                  <span className="text-sm font-semibold text-slate-700">{product.amount}</span>
-                </div>
-              ))}
-            </div>
-          </article>
-        </section>
-
-        <article className="space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-800">Ingresos mensuales</h2>
-              <Clock3 className="h-5 w-5 text-slate-400" />
-            </div>
-            <div className="mt-3 h-52 min-w-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-2">
-              {salesSeries.length === 0 ? (
-                <div className="flex h-full items-center justify-center text-xs text-slate-500">Sin datos de ingresos mensuales.</div>
+        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Ventas por categoría</p>
+              {salesByCategory.length === 0 ? (
+                <p className="text-xs text-slate-500">Sin datos de categorías.</p>
               ) : (
-                <ResponsiveContainer className="min-w-0 w-full" width="100%" height="100%">
-                  <BarChart data={salesSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                    <defs>
-                      <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#16a34a" stopOpacity={0.35} />
-                        <stop offset="95%" stopColor="#16a34a" stopOpacity={0.02} />
-                      </linearGradient>
-                    </defs>
-                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} width={40} />
-                    <Tooltip
-                      formatter={(value) => formatCurrency(Number(value || 0), currencySymbol)}
-                      contentStyle={{ borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}
-                    />
-                    <Bar dataKey="total" fill="#16a34a" radius={[5, 5, 0, 0]} />
-                  </BarChart>
-                </ResponsiveContainer>
+                <div className="space-y-2">
+                  {salesByCategory.map((c) => (
+                    <div key={c.name} className="flex min-w-0 items-center justify-between gap-2 text-sm">
+                      <span className="min-w-0 truncate text-slate-700">{c.name}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-slate-900">{c.total}</span>
+                    </div>
+                  ))}
+                </div>
               )}
             </div>
-            <p className="mt-2 text-xs text-slate-500">Rango: {rangeLabel}</p>
-          </div>
-
-          <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-800">Resumen del día</h2>
-              <ClipboardList className="h-5 w-5 text-slate-400" />
+            <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Stock bajo</p>
+              {lowStockProducts.length === 0 ? (
+                <p className="text-xs text-slate-500">Sin alertas de inventario.</p>
+              ) : (
+                <div className="space-y-2">
+                  {lowStockProducts.map((p) => (
+                    <div key={p.name} className="flex min-w-0 items-center justify-between gap-2 text-sm">
+                      <span className="min-w-0 truncate text-slate-700">{p.name}</span>
+                      <span className="shrink-0 font-semibold tabular-nums text-amber-700">
+                        {p.stock}/{p.min}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {["Ventas hoy", "Ingresos hoy", "Ticket promedio", "Ventas Mes"].map((title) => {
+          </div>
+        </article>
+
+        {/* Misma altura visual: top productos | resumen del día (claves KPI alineadas con la fila superior) */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+          <article className="flex min-h-[260px] flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex shrink-0 items-center gap-2 border-b border-slate-100 pb-3">
+              <Sparkles className="h-5 w-5 shrink-0 text-amber-500" />
+              <h2 className="text-base font-semibold text-slate-800">Productos más vendidos</h2>
+            </div>
+            <div className="flex min-h-0 flex-1 flex-col gap-2">
+              {safeProducts.length === 0 ? (
+                <p className="text-sm text-slate-500">Sin datos de productos.</p>
+              ) : (
+                safeProducts.map((product) => (
+                  <div
+                    key={product.name}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <ShoppingBag className="h-4 w-4 shrink-0 text-slate-400" />
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-slate-800">{product.name}</p>
+                        <p className="text-xs text-slate-500">{product.sold} vendidos</p>
+                      </div>
+                    </div>
+                    <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-800">{product.amount}</span>
+                  </div>
+                ))
+              )}
+            </div>
+          </article>
+
+          <article className="flex min-h-[260px] flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="mb-3 flex shrink-0 items-center justify-between border-b border-slate-100 pb-3">
+              <h2 className="text-base font-semibold text-slate-800">Resumen del día</h2>
+              <ClipboardList className="h-5 w-5 shrink-0 text-slate-400" />
+            </div>
+            <div className="grid flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
+              {RESUMEN_DIA_KEYS.map((title) => {
                 const s = statsByTitle.get(title);
                 if (!s) return null;
                 return (
-                  <div key={title} className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-                    <p className="text-xs text-slate-500">{title}</p>
-                    <p className="mt-1 text-xl font-bold text-slate-900">{s.value}</p>
-                    <p className="mt-0.5 text-xs text-slate-500">{s.detail}</p>
+                  <div key={title} className="flex flex-col rounded-lg border border-slate-100 bg-slate-50/90 p-3">
+                    <p className="text-[11px] font-medium leading-tight text-slate-500">{title}</p>
+                    <p className="mt-1.5 text-lg font-bold tabular-nums text-slate-900 sm:text-xl">{s.value}</p>
+                    <p className="mt-auto pt-1 text-[11px] leading-snug text-slate-500">{s.detail}</p>
                   </div>
                 );
               })}
             </div>
+          </article>
+        </div>
+
+        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-slate-800">Ingresos mensuales</h2>
+            <Clock3 className="h-5 w-5 text-slate-400" />
           </div>
+          <div className="mt-3 h-56 min-w-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-2 sm:h-60">
+            {salesSeries.length === 0 ? (
+              <div className="flex h-full items-center justify-center text-xs text-slate-500">Sin datos de ingresos mensuales.</div>
+            ) : (
+              <ResponsiveContainer className="min-w-0 w-full" width="100%" height="100%">
+                <BarChart data={salesSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#16a34a" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#16a34a" stopOpacity={0.02} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} width={40} />
+                  <Tooltip
+                    formatter={(value) => formatCurrency(Number(value || 0), currencySymbol)}
+                    contentStyle={{ borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}
+                  />
+                  <Bar dataKey="total" fill="#16a34a" radius={[5, 5, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+          <p className="mt-2 text-xs text-slate-500">Rango: {rangeLabel}</p>
         </article>
       </div>
     </BackofficePageShell>

@@ -3,6 +3,7 @@ import { BackofficeDialog } from "../../components/index.js";
 import { 
   productModalFieldClass, 
   productModalCodigoFieldClass,
+  productModalInputLockedClass,
   productModalTextareaClass,
   fileToBase64 
 } from "../../utils/inventoryUtils.js";
@@ -29,6 +30,8 @@ export function ProductFormModal({
 
   if (!modalOpen) return null;
 
+  const isEditing = Boolean(form?.id);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!isOnline) {
@@ -52,14 +55,16 @@ export function ProductFormModal({
 
         {/* Grid de Campos */}
         <div className="mt-4 grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 sm:items-start sm:gap-x-6 sm:gap-y-3">
-          {/* Código SKU */}
+          {/* Código SKU: mismo comportamiento visual que «Stock actual» al editar (disabled + estilos) */}
           <label className="min-w-0 block text-xs font-semibold text-slate-600">
             Código
             <input
               value={form.codigo}
               onChange={(e) => setForm((f) => ({ ...f, codigo: e.target.value }))}
               placeholder="Se generará automáticamente si se deja vacío"
-              className={productModalCodigoFieldClass}
+              className={`${productModalCodigoFieldClass} ${productModalInputLockedClass}`}
+              disabled={isEditing}
+              title={isEditing ? "El código no se puede cambiar al editar un producto." : undefined}
               autoComplete="off"
             />
           </label>
@@ -178,7 +183,7 @@ export function ProductFormModal({
                   value={form.stock}
                   onChange={(e) => setForm((f) => ({ ...f, stock: e.target.value }))}
                   placeholder="Stock"
-                  className={`${productModalFieldClass} disabled:cursor-not-allowed disabled:bg-slate-100 disabled:text-slate-500`}
+                  className={`${productModalFieldClass} ${productModalInputLockedClass}`}
                   disabled={Boolean(form.id)}
                   title={form.id ? "El stock se ajusta desde movimientos de inventario." : undefined}
                 />

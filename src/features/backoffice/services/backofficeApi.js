@@ -135,6 +135,7 @@ export const backofficeApi = {
   // Categorías
   listCategorias: () => api.get("/api/v1/catalogos/categorias-producto"),
   catalogoCategorias: () => api.get("/api/v1/catalogos/categorias-producto"),
+  getCategoriaProducto: (id) => api.get(`/api/v1/catalogos/categorias-producto/${id}`),
   createCategoria: (body) => api.post("/api/v1/catalogos/categorias-producto", body),
   updateCategoria: (id, body) => api.put(`/api/v1/catalogos/categorias-producto/${id}`, body),
   deleteCategoria: (id) => api.delete(`/api/v1/catalogos/categorias-producto/${id}`),

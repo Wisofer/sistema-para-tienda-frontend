@@ -119,8 +119,13 @@ function base64ToBlob(base64) {
   return new Blob([u8arr], { type: mime });
 }
 
-/** 
- * MAPEO: Frontend (camelCase) -> Backend (FormData PascalCase según documentación)
+/**
+ * MAPEO: Frontend (camelCase) -> Backend FormData (PascalCase).
+ * Imagen (API v1 productos):
+ * - Sin cambiar imagen: no enviar Imagen ni EliminarImagen.
+ * - Foto nueva: parte Imagen (base64 -> archivo); no enviar EliminarImagen.
+ * - Quitar foto: no enviar Imagen; EliminarImagen = "true" (vía body.eliminarImagen).
+ * - Si hubiera archivo nuevo y flag, prevalece el archivo (no se envía EliminarImagen).
  */
 function toBackendProduct(body) {
   if (!body) return body;
@@ -144,17 +149,22 @@ function toBackendProduct(body) {
   fd.append("CategoriaProductoId", Number(body.categoriaProductoId || 0));
   fd.append("ControlarStock", ctrl ? "true" : "false");
   fd.append("Activo", body.activo !== false ? "true" : "false");
-  
+
   if (body.proveedorId) {
     fd.append("ProveedorId", Number(body.proveedorId));
   }
 
-  // Convertir base64 a archivo binario si existe
+  let appendedNewImageFile = false;
   if (body.imagen) {
     const blob = base64ToBlob(body.imagen);
     if (blob) {
       fd.append("Imagen", blob, "producto.jpg");
+      appendedNewImageFile = true;
     }
+  }
+
+  if (body.eliminarImagen === true && !appendedNewImageFile) {
+    fd.append("EliminarImagen", "true");
   }
 
   return fd;
@@ -176,8 +186,73 @@ export function mapVariantesFromBackend(raw) {
 }
 
 /**
- * MAPEO: Backend (PascalCase) -> Frontend (camelCase para UI)
+ * Unifica respuesta GET /productos: items mapeados + metadatos de paginación para la UI.
+ * Acepta camelCase / PascalCase y respuestas sin total (se infiere por la última página).
  */
+export function normalizeProductListResponse(raw, requestParams = {}) {
+  const reqPage = Number(requestParams.page ?? 1) || 1;
+  const reqSize = clampPageSize(requestParams.pageSize ?? MAX_PAGE_SIZE);
+
+  if (Array.isArray(raw)) {
+    const items = raw.map(fromBackendProduct);
+    return {
+      items,
+      page: 1,
+      pageSize: items.length,
+      totalCount: items.length,
+      totalPages: 1,
+      totalCountFromServer: false,
+    };
+  }
+
+  const itemsRaw = raw?.items ?? raw?.Items ?? [];
+  const items = Array.isArray(itemsRaw) ? itemsRaw.map(fromBackendProduct) : [];
+
+  const page = Number(raw?.page ?? raw?.Page ?? reqPage) || 1;
+  const pageSize = Number(raw?.pageSize ?? raw?.PageSize ?? reqSize) || reqSize;
+
+  const tcRaw = raw?.totalCount ?? raw?.TotalCount ?? raw?.total ?? raw?.Total;
+  const totalCountFromServer =
+    tcRaw != null && tcRaw !== "" && !Number.isNaN(Number(tcRaw));
+
+  let totalCount = totalCountFromServer ? Number(tcRaw) : null;
+  let totalPages = raw?.totalPages ?? raw?.TotalPages;
+  if (totalPages != null && totalPages !== "") {
+    totalPages = Number(totalPages);
+  } else {
+    totalPages = null;
+  }
+
+  if (totalCount != null && Number.isFinite(totalCount) && (totalPages == null || !Number.isFinite(totalPages)) && pageSize > 0) {
+    totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  }
+
+  if (totalPages == null) {
+    if (items.length < pageSize) {
+      totalPages = Math.max(1, page);
+    } else {
+      totalPages = page + 1;
+    }
+  }
+
+  if (!totalCountFromServer) {
+    if (items.length < pageSize) {
+      totalCount = (page - 1) * pageSize + items.length;
+    } else {
+      totalCount = null;
+    }
+  }
+
+  return {
+    items,
+    page,
+    pageSize,
+    totalCount,
+    totalPages: Math.max(1, Number(totalPages) || 1),
+    totalCountFromServer,
+  };
+}
+
 export function fromBackendProduct(p) {
   if (!p) return p;
   const cat =
@@ -226,10 +301,7 @@ export const productsApi = {
     const p = { ...(params || {}) };
     if (p.pageSize != null) p.pageSize = clampPageSize(p.pageSize);
     const raw = await api.get(`${base}${qs(p)}`);
-    if (Array.isArray(raw)) return raw.map(fromBackendProduct);
-    if (raw?.items) return { ...raw, items: raw.items.map(fromBackendProduct) };
-    if (raw?.Items) return { ...raw, items: raw.Items.map(fromBackendProduct) };
-    return raw;
+    return normalizeProductListResponse(raw, p);
   },
   get: async (id) => fromBackendProduct(await api.get(`${base}/${id}`)),
   create: (body) => api.post(base, toBackendProduct(body)),

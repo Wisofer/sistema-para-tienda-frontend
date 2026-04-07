@@ -49,6 +49,7 @@ export function PosView({ currencySymbol = "C$" }) {
     variantModal,
     setVariantModal,
     addVariantToCart,
+    addToCartWithOpcionesSeleccion,
   } = usePOS(currencySymbol);
 
   return (
@@ -121,12 +122,11 @@ export function PosView({ currencySymbol = "C$" }) {
         <PosProductOpcionesModal
           open={opcionesModal.open}
           product={opcionesModal.product}
+          currencySymbol={currencySymbol}
           onClose={() => setOpcionesModal({ open: false, product: null })}
-          onConfirm={(product, opciones) => {
-            // Re-usar lógica del hook si fuera necesario, 
-            // o manejar localmente la confirmación.
+          onConfirm={(opcionesSeleccionadas) => {
+            addToCartWithOpcionesSeleccion(opcionesModal.product, opcionesSeleccionadas);
             setOpcionesModal({ open: false, product: null });
-            // TODO: Integrar lógica de opciones con addToCart si es necesario
           }}
         />
       )}

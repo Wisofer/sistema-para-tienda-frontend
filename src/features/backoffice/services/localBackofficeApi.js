@@ -196,7 +196,7 @@ export const localBackofficeApi = {
     throw new Error("Credenciales inválidas (admin/admin)");
   },
   listProductos: productCrud.list, getProducto: productCrud.get, saveProducto: productCrud.save, createProducto: productCrud.save, updateProducto: productCrud.save, deleteProducto: productCrud.delete,
-  listCategorias: categoryCrud.list, saveCategoria: categoryCrud.save, createCategoria: categoryCrud.save, updateCategoria: categoryCrud.save, deleteCategoria: categoryCrud.delete, catalogoCategorias: async () => storage.get(CATEGORIES_CACHE_KEY), catalogoCategoriasProducto: async () => storage.get(CATEGORIES_CACHE_KEY),
+  listCategorias: categoryCrud.list, getCategoriaProducto: (id) => categoryCrud.get(id), saveCategoria: categoryCrud.save, createCategoria: categoryCrud.save, updateCategoria: categoryCrud.save, deleteCategoria: categoryCrud.delete, catalogoCategorias: async () => storage.get(CATEGORIES_CACHE_KEY), catalogoCategoriasProducto: async () => storage.get(CATEGORIES_CACHE_KEY),
   listProveedores: providerCrud.list, getProveedor: providerCrud.get, saveProveedor: providerCrud.save, createProveedor: providerCrud.save, updateProveedor: providerCrud.save, deleteProveedor: providerCrud.delete, catalogoProveedores: async () => storage.get(PROVIDERS_CACHE_KEY),
   listClientes: clientCrud.list, saveCliente: clientCrud.save, deleteCliente: clientCrud.delete,
   listUsuarios: userCrud.list, saveUsuario: userCrud.save, createUsuario: userCrud.save, updateUsuario: userCrud.save, deleteUsuario: userCrud.delete,

@@ -18,9 +18,14 @@ import { PAYMENT_METHOD_API } from "../../../utils/paymentMethod.js";
 import { fetchPosProductosYCategorias } from "../utils/posCatalogLoad.js";
 import { printPosTicketAfterPayment } from "../utils/backofficePrint.js";
 import {
+  buildOpcionesResumenLocal,
   genPosLineId,
-  productoTieneOpcionesVisibles,
   getSingleGrupoOpcionesForPosInline,
+  normalizeOpcionesGrupos,
+  normalizeOpcionesSeleccionadas,
+  opcionesSeleccionadasKey,
+  productoTieneOpcionesVisibles,
+  sumarPrecioAdicionalOpciones,
 } from "../utils/productoOpciones.js";
 import { labelVarianteResumen, normalizeProductoVariantes, productoRequiereModalVariante } from "../utils/posVariantes.js";
 import { POS_ORDER_VIRTUAL_ID, calculateSubtotal, filterPosProducts } from "../utils/posUtils.js";
@@ -258,6 +263,49 @@ export function usePOS(currencySymbol = "C$") {
   );
 
   /**
+   * Producto con opciones (modal): añade línea con precio extra y resumen de opciones.
+   */
+  const addToCartWithOpcionesSeleccion = useCallback((product, rawOpciones) => {
+    if (!product) return;
+    const grupos = normalizeOpcionesGrupos(product);
+    const opcionesSeleccionadas = normalizeOpcionesSeleccionadas(rawOpciones);
+    const extra = sumarPrecioAdicionalOpciones(grupos, opcionesSeleccionadas);
+    const resumen = buildOpcionesResumenLocal(grupos, opcionesSeleccionadas);
+    const basePrice = Number(product.precioVenta || product.precio || 0);
+    const lineId = genPosLineId();
+    const selKey = opcionesSeleccionadasKey(opcionesSeleccionadas);
+
+    setCart((prev) => {
+      const idx = prev.findIndex(
+        (x) =>
+          x.id === product.id &&
+          x.varianteId == null &&
+          opcionesSeleccionadasKey(x.opcionesSeleccionadas) === selKey
+      );
+      if (idx >= 0) {
+        const next = [...prev];
+        next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
+        return next;
+      }
+      return [
+        ...prev,
+        {
+          lineId,
+          id: product.id,
+          name: product.nombre,
+          price: basePrice + extra,
+          qty: 1,
+          opcionesSeleccionadas,
+          opcionesResumen: resumen,
+          notas: "",
+          talla: product.talla,
+          imagen: product.imagen,
+        },
+      ];
+    });
+  }, []);
+
+  /**
    * Preparar checkout.
    */
   const handleCheckout = useCallback(async () => {
@@ -431,6 +479,7 @@ export function usePOS(currencySymbol = "C$") {
     variantModal,
     setVariantModal,
     addVariantToCart,
+    addToCartWithOpcionesSeleccion,
     inlineOpcionesProduct,
     setPosInlineOpcionesProduct,
   };

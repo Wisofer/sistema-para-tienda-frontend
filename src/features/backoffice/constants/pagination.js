@@ -10,5 +10,7 @@ export const PAGINATION = {
   CATALOG_ALERTS: 200,
   /** Listado paginado en administración de productos (máx. típico API: 200). */
   PRODUCTOS_ADMIN: 200,
+  /** Tamaño de página por defecto en la vista Inventario (productos). */
+  PRODUCTOS_PAGE_SIZE: 50,
   MOVIMIENTOS: 200,
 };

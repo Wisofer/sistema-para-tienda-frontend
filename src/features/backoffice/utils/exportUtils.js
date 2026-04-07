@@ -2,6 +2,16 @@
  * Utilidades para exportación de datos a formatos descargables (CSV/Excel).
  */
 
+/** Columnas del export de inventario (CSV UTF-8 con BOM, compatible con Excel). */
+export const INVENTORY_EXPORT_HEADERS = [
+  { label: "Código", key: "codigo" },
+  { label: "Nombre", key: "nombre" },
+  { label: "Talla", key: "talla" },
+  { label: "Color", key: "color" },
+  { label: "Stock", key: "stock" },
+  { label: "Precio", key: "precioVenta" },
+];
+
 /**
  * Genera y descarga un archivo CSV compatible con Excel (UTF-8 con BOM).
  * @param {Array<Object>} data Lista de objetos con los datos.

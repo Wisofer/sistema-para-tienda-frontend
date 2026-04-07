@@ -4,10 +4,17 @@ import { PAGINATION } from "../constants/pagination.js";
 import { POS_INVENTORY_UPDATED_EVENT } from "../constants/posEvents.js";
 import { resolveProductCodigoForSave } from "../utils/productCodigo.js";
 import { parseOpcionesEspecialesFromGruposApi } from "../utils/productoOpcionesEspecialesSync.js";
-import { downloadCSV } from "../utils/exportUtils.js";
+import { downloadCSV, INVENTORY_EXPORT_HEADERS } from "../utils/exportUtils.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { PROVIDERS_UPDATED_EVENT } from "../providers/constants.js";
-import { tieneControlStock, normalizeMovementRow } from "../utils/inventoryUtils.js";
+import {
+  tieneControlStock,
+  normalizeMovementRow,
+  enrichProductsWithCategoryNames,
+  fetchAllProductPages,
+  normalizeInventoryCategoryFilterId,
+  consumePendingInventoryCategory,
+} from "../utils/inventoryUtils.js";
 
 /** 
  * Hook personalizado para manejar toda la lógica del módulo de Inventario.
@@ -23,7 +30,15 @@ export function useInventory(currencySymbol = "C$") {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  
+  const [inventoryPageLoading, setInventoryPageLoading] = useState(false);
+  const [listMeta, setListMeta] = useState({
+    page: 1,
+    pageSize: PAGINATION.PRODUCTOS_PAGE_SIZE,
+    totalCount: null,
+    totalPages: 1,
+    totalCountFromServer: false,
+  });
+
   // Configuración de visualización
   const [gridColumns, setGridColumns] = useState(() => {
     const saved = localStorage.getItem("inv_grid_cols");
@@ -72,7 +87,9 @@ export function useInventory(currencySymbol = "C$") {
     opcionesEspecialesLines: [""],
     opcionesEspecialesGrupoId: null,
     talla: "",
+    color: "",
     imagen: "",
+    imagenAlAbrir: "",
   });
 
   const [stockForm, setStockForm] = useState({
@@ -87,26 +104,68 @@ export function useInventory(currencySymbol = "C$") {
     observaciones: "",
   });
 
-  const loadProducts = useCallback(async (categoriaId = selectedCategory) => {
+  const loadProducts = useCallback(async (opts = {}) => {
+    const page = Number(opts.page ?? 1) || 1;
+    const categoriaId = opts.categoriaId !== undefined ? opts.categoriaId : selectedCategory;
+    const q = opts.search !== undefined ? opts.search : search;
     try {
       const data = await backofficeApi.listProductos({
-        page: 1,
-        pageSize: PAGINATION.PRODUCTOS_ADMIN,
-        search: search || undefined,
+        page,
+        pageSize: PAGINATION.PRODUCTOS_PAGE_SIZE,
+        search: String(q || "").trim() || undefined,
         categoriaId: categoriaId || undefined,
       });
       setProducts(Array.isArray(data?.items) ? data.items : []);
+      setListMeta({
+        page: data.page ?? page ?? 1,
+        pageSize: data.pageSize ?? PAGINATION.PRODUCTOS_PAGE_SIZE,
+        totalCount: data.totalCount ?? null,
+        totalPages: data.totalPages ?? 1,
+        totalCountFromServer: Boolean(data.totalCountFromServer),
+      });
+      setError("");
     } catch (e) {
       setError(e.message || "Error al cargar productos.");
     }
   }, [selectedCategory, search]);
 
-  // Carga inicial
+  const withInventoryPageLoading = useCallback(async (fn) => {
+    setInventoryPageLoading(true);
+    try {
+      return await fn();
+    } finally {
+      setInventoryPageLoading(false);
+    }
+  }, []);
+
+  const handleInventoryPageChange = useCallback(
+    async (nextPage) => {
+      const n = Number(nextPage);
+      if (!Number.isFinite(n) || n < 1) return;
+      await withInventoryPageLoading(() => loadProducts({ page: n }));
+    },
+    [loadProducts, withInventoryPageLoading]
+  );
+
+  /** Misma página y filtro tras crear/editar/borrar/movimiento de stock. */
+  const refreshInventoryList = useCallback(async () => {
+    await loadProducts({ page: listMeta.page, categoriaId: selectedCategory });
+  }, [loadProducts, listMeta.page, selectedCategory]);
+
+  /** Búsqueda: vuelve a página 1 con el término actual en `search`. */
+  const reloadInventoryFirstPage = useCallback(async () => {
+    await withInventoryPageLoading(() => loadProducts({ page: 1 }));
+  }, [loadProducts, withInventoryPageLoading]);
+
+  // Carga inicial (si venimos de Categorías con filtro pendiente en sessionStorage)
   useEffect(() => {
     let mounted = true;
+    const pending = consumePendingInventoryCategory();
+    const initialCategoria = pending === null ? "" : pending;
+    setSelectedCategory(initialCategoria);
     setLoading(true);
     Promise.all([
-      loadProducts(""),
+      loadProducts({ page: 1, categoriaId: initialCategoria }),
       backofficeApi.catalogoCategoriasProducto(),
       backofficeApi.catalogoProveedores()
     ])
@@ -120,6 +179,18 @@ export function useInventory(currencySymbol = "C$") {
     
     return () => { mounted = false; };
   }, []); // Solo al montar
+
+  const searchDebounceSkip = useRef(true);
+  useEffect(() => {
+    if (searchDebounceSkip.current) {
+      searchDebounceSkip.current = false;
+      return;
+    }
+    const t = setTimeout(() => {
+      void reloadInventoryFirstPage();
+    }, 400);
+    return () => clearTimeout(t);
+  }, [search, reloadInventoryFirstPage]);
 
   // Escuchar actualizaciones de proveedores
   useEffect(() => {
@@ -142,45 +213,37 @@ export function useInventory(currencySymbol = "C$") {
     }
   }, [snackbar]);
 
-  const filteredProducts = useMemo(() => {
-    const withCategoryName = (p) => {
-      if (p.categoriaNombre) return p;
-      const cid = p.categoriaProductoId;
-      const cat = categories.find((c) => String(c.id) === String(cid));
-      return {
-        ...p,
-        categoriaNombre: cat?.nombre || cat?.Nombre || "",
-      };
-    };
-    let list = products.map(withCategoryName);
-    if (selectedCategory) {
-      list = list.filter((p) => String(p.categoriaProductoId || "") === String(selectedCategory));
-    }
-    if (search.trim()) {
-      const q = search.toLowerCase().trim();
-      list = list.filter((p) =>
-        (p.nombre || "").toLowerCase().includes(q) ||
-        (p.codigo || "").toLowerCase().includes(q)
-      );
-    }
-    return list;
-  }, [products, categories, selectedCategory, search]);
+  /** Lista paginada por el API; nombres de categoría para la UI y exportación. */
+  const filteredProducts = useMemo(
+    () => enrichProductsWithCategoryNames(products, categories),
+    [products, categories]
+  );
 
   const onCategoryChange = async (value) => {
     setSelectedCategory(value);
     setLoading(true);
     try {
-      await loadProducts(value);
+      await loadProducts({ page: 1, categoriaId: value });
     } finally {
       setLoading(false);
     }
   };
 
+  /** Misma idea que BarResPos `onOpenProducts`: filtrar sin tapar toda la vista con `loading` inicial. */
+  const openInventoryWithCategory = useCallback(
+    async (categoriaId) => {
+      const id = normalizeInventoryCategoryFilterId(categoriaId);
+      setSelectedCategory(id);
+      await withInventoryPageLoading(() => loadProducts({ page: 1, categoriaId: id }));
+    },
+    [loadProducts, withInventoryPageLoading]
+  );
+
   const removeProduct = async (id) => {
     setSaving(true);
     try {
       await backofficeApi.deleteProducto(id);
-      await loadProducts(selectedCategory);
+      await refreshInventoryList();
       snackbar.success("Producto eliminado/desactivado.");
       window.dispatchEvent(new CustomEvent(POS_INVENTORY_UPDATED_EVENT));
     } catch (e) {
@@ -193,16 +256,23 @@ export function useInventory(currencySymbol = "C$") {
   const exportProductsExcel = async () => {
     setSaving(true);
     try {
-      const headers = [
-        { label: "Código", key: "codigo" },
-        { label: "Nombre", key: "nombre" },
-        { label: "Talla", key: "talla" },
-        { label: "Color", key: "color" },
-        { label: "Stock", key: "stock" },
-        { label: "Precio", key: "precioVenta" },
-      ];
       const filename = `inventario-${new Date().toISOString().slice(0, 10)}.csv`;
-      downloadCSV(filteredProducts, headers, filename);
+      const q = String(search || "").trim() || undefined;
+      const cat = selectedCategory || undefined;
+      const all = await fetchAllProductPages(
+        (params) => backofficeApi.listProductos(params),
+        {
+          search: q,
+          categoriaId: cat,
+        },
+        { pageSize: PAGINATION.PRODUCTOS_ADMIN }
+      );
+      const withCat = enrichProductsWithCategoryNames(all, categories);
+      if (withCat.length === 0) {
+        snackbar.error("No hay productos para exportar con los filtros actuales.");
+        return;
+      }
+      downloadCSV(withCat, INVENTORY_EXPORT_HEADERS, filename);
       snackbar.success("Inventario exportado correctamente.");
     } catch (e) {
       snackbar.error("Error al exportar inventario.");
@@ -244,6 +314,7 @@ export function useInventory(currencySymbol = "C$") {
       talla: "",
       color: "",
       imagen: "",
+      imagenAlAbrir: "",
     });
     setModalOpen(true);
   };
@@ -281,6 +352,7 @@ export function useInventory(currencySymbol = "C$") {
         talla: p.talla || "",
         color: p.color || "",
         imagen: p.imagen || "",
+        imagenAlAbrir: (p.imagen && String(p.imagen).trim()) ? String(p.imagen) : "",
       });
       setModalOpen(true);
     } catch (e) {
@@ -312,6 +384,11 @@ export function useInventory(currencySymbol = "C$") {
         color: form.color,
         imagen: form.imagen,
         stock: ctrl ? Number(form.stock ?? 0) : 0,
+        ...(form.id &&
+        form.imagenAlAbrir &&
+        !String(form.imagen || "").trim()
+          ? { eliminarImagen: true }
+          : {}),
       };
       
       if (form.id) {
@@ -321,7 +398,7 @@ export function useInventory(currencySymbol = "C$") {
         await backofficeApi.createProducto(body);
       }
       
-      await loadProducts(selectedCategory);
+      await refreshInventoryList();
       setModalOpen(false);
       snackbar.success(form.id ? "Producto actualizado." : "Producto creado.");
       window.dispatchEvent(new CustomEvent(POS_INVENTORY_UPDATED_EVENT));
@@ -417,7 +494,7 @@ export function useInventory(currencySymbol = "C$") {
         });
       }
       
-      await loadProducts(selectedCategory);
+      await refreshInventoryList();
       setStockModalOpen(false);
       snackbar.success("Movimiento de inventario aplicado.");
       window.dispatchEvent(new CustomEvent(POS_INVENTORY_UPDATED_EVENT));
@@ -495,7 +572,7 @@ export function useInventory(currencySymbol = "C$") {
 
   return {
     products, categories, providers, loading, saving, error,
-    search, setSearch, selectedCategory, onCategoryChange,
+    search, setSearch, selectedCategory, onCategoryChange, openInventoryWithCategory,
     filteredProducts, removeProduct, exportProductsExcel, reloadCategoriesOnly,
     modalOpen, setModalOpen, openCreate, openEdit, saveProduct, form, setForm,
     stockModalOpen, setStockModalOpen, openStockModal, submitStockAction, stockForm, setStockForm, stockMode,
@@ -506,6 +583,9 @@ export function useInventory(currencySymbol = "C$") {
     productHistoryModalOpen, setProductHistoryModalOpen, openProductHistory, historyRows, selectedProductName,
     categoriesScreen, setCategoriesScreen,
     confirmAction, setConfirmAction,
-    gridColumns, setGridColumns
+    gridColumns, setGridColumns,
+    listMeta,
+    handleInventoryPageChange,
+    inventoryPageLoading,
   };
 }

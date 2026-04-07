@@ -5,6 +5,7 @@ import { BackofficeShellHeaderActions, MobileNav, SidebarNav } from "../features
 import { NAV_ITEMS } from "../features/backoffice/constants.js";
 import { backofficeApi } from "../features/backoffice/services/backofficeApi.js";
 import { PAGINATION } from "../features/backoffice/constants/pagination.js";
+import { setPendingInventoryCategory } from "../features/backoffice/utils/inventoryUtils.js";
 import { POS_INVENTORY_UPDATED_EVENT } from "../features/backoffice/constants/posEvents.js";
 import { DEFAULT_TIPO_CAMBIO_USD, resolveCurrencySymbol } from "../features/backoffice/utils/currency.js";
 import { pickPortalTagline } from "../features/backoffice/utils/portalConfig.js";
@@ -125,6 +126,15 @@ export function AuthHome() {
     setMobileMenuOpen(false);
   };
 
+  /** Desde la vista «Categorías» del menú: ir a Inventario con el filtro (misma idea que BarResPos). */
+  const navigateToInventoryWithCategory = useCallback(
+    (categoriaId) => {
+      setPendingInventoryCategory(categoriaId);
+      openView("products");
+    },
+    [openView]
+  );
+
   useEffect(() => {
     if (!allowedViewIds.includes(activeView)) {
       setActiveView(allowedViewIds[0] || "dashboard");
@@ -200,7 +210,6 @@ export function AuthHome() {
     if (activeView === "reports") return ReportsView;
     if (activeView === "clients") return ClientsView;
     if (activeView === "pos") return PosView;
-    if (activeView === "categories") return CategoriesView;
     return DashboardView;
   }, [activeView]);
 
@@ -275,7 +284,14 @@ export function AuthHome() {
             </header>
           )}
           <div className="flex min-h-0 flex-1 flex-col">
-            <ActiveView currencySymbol={currencySymbol} exchangeRate={tipoCambio} />
+            {activeView === "categories" ? (
+              <CategoriesView
+                onBackToProducts={() => openView("products")}
+                onOpenProducts={navigateToInventoryWithCategory}
+              />
+            ) : (
+              <ActiveView currencySymbol={currencySymbol} exchangeRate={tipoCambio} />
+            )}
           </div>
         </section>
       </div>

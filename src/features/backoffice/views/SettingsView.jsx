@@ -242,6 +242,34 @@ export function SettingsView() {
             </article>
           </section>
 
+          {settings.length > 0 && (
+            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <h3 className="mb-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Parámetros del sistema</h3>
+              <ul className="divide-y divide-slate-100">
+                {settings.map((cfg, i) => {
+                  const clave = cfg?.clave ?? cfg?.Clave ?? `cfg-${i}`;
+                  const valor = cfg?.valor ?? cfg?.Valor ?? "";
+                  return (
+                    <li key={String(clave)} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-800">{clave}</p>
+                        <p className="truncate text-xs text-slate-500">{String(valor)}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => openConfigEditor(cfg)}
+                        className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Editar
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          )}
+
           {/* Preferencias de POS */}
           <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h3 className="mb-5 text-[11px] font-black uppercase tracking-widest text-slate-400">Preferencias del POS</h3>

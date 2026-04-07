@@ -1,7 +1,9 @@
 import React from "react";
 import { BackofficePageShell, BackofficeStatCardsListSkeleton } from "../components/index.js";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
+import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { CategoriesView } from "./CategoriesView.jsx";
+import { normalizeInventoryCategoryFilterId } from "../utils/inventoryUtils.js";
 
 // Hook personalizado
 import { useInventory } from "../hooks/useInventory.js";
@@ -9,6 +11,7 @@ import { useInventory } from "../hooks/useInventory.js";
 // Componentes modulares
 import { InventoryHeader } from "../components/inventory/InventoryHeader.jsx";
 import { ProductGrid } from "../components/inventory/ProductGrid.jsx";
+import { InventoryListFooter } from "../components/inventory/InventoryListFooter.jsx";
 import { ProductFormModal } from "../components/inventory/ProductFormModal.jsx";
 import { StockMovementModal } from "../components/inventory/StockMovementModal.jsx";
 import { 
@@ -24,8 +27,8 @@ import {
  * Lineas aproximadas: < 150 (Reducción de ~1000 líneas).
  */
 export function ProductsView({ currencySymbol = "C$" }) {
+  const snackbar = useSnackbar();
   const {
-    products,
     categories,
     providers,
     loading,
@@ -35,6 +38,7 @@ export function ProductsView({ currencySymbol = "C$" }) {
     setSearch,
     selectedCategory,
     onCategoryChange,
+    openInventoryWithCategory,
     filteredProducts,
     removeProduct,
     exportProductsExcel,
@@ -74,11 +78,11 @@ export function ProductsView({ currencySymbol = "C$" }) {
     setCategoriesScreen,
     confirmAction,
     setConfirmAction,
-    addVariant,
-    removeVariant,
-    updateVariant,
     gridColumns,
     setGridColumns,
+    listMeta,
+    handleInventoryPageChange,
+    inventoryPageLoading,
   } = useInventory(currencySymbol);
 
   // Pantalla de carga
@@ -93,9 +97,13 @@ export function ProductsView({ currencySymbol = "C$" }) {
         onBackToProducts={() => setCategoriesScreen(false)}
         onOpenProducts={async (categoriaId) => {
           setCategoriesScreen(false);
-          const id = categoriaId ? String(categoriaId) : "";
-          await onCategoryChange(id);
-          await reloadCategoriesOnly();
+          const id = normalizeInventoryCategoryFilterId(categoriaId);
+          try {
+            await openInventoryWithCategory(id);
+            await reloadCategoriesOnly();
+          } catch (e) {
+            snackbar.error(e?.message || "No se pudo cargar productos.");
+          }
         }}
         onCategoriesMutated={reloadCategoriesOnly}
       />
@@ -129,13 +137,25 @@ export function ProductsView({ currencySymbol = "C$" }) {
       />
 
       {/* 2. Listado de Productos (Cuadrícula) */}
-      <ProductGrid
-        products={filteredProducts}
-        currencySymbol={currencySymbol}
-        openEdit={openEdit}
-        openProductHistory={openProductHistory}
-        setConfirmAction={setConfirmAction}
-        gridColumns={gridColumns}
+      <div className={inventoryPageLoading ? "pointer-events-none opacity-60" : ""}>
+        <ProductGrid
+          products={filteredProducts}
+          currencySymbol={currencySymbol}
+          openEdit={openEdit}
+          openProductHistory={openProductHistory}
+          setConfirmAction={setConfirmAction}
+          gridColumns={gridColumns}
+        />
+      </div>
+
+      <InventoryListFooter
+        page={listMeta.page}
+        pageSize={listMeta.pageSize}
+        totalPages={listMeta.totalPages}
+        totalCount={listMeta.totalCount}
+        itemsOnPage={filteredProducts.length}
+        onPageChange={handleInventoryPageChange}
+        loading={inventoryPageLoading}
       />
 
       {/* --- MODALES --- */}

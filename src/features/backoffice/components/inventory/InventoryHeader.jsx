@@ -45,13 +45,13 @@ export function InventoryHeader({
               />
             </div>
             <select
-              value={selectedCategory}
+              value={selectedCategory != null && selectedCategory !== "" ? String(selectedCategory) : ""}
               onChange={(e) => onCategoryChange(e.target.value)}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm sm:w-auto focus:border-blue-500 focus:outline-none"
             >
               <option value="">Todas las categorías</option>
               {categories.map((c) => (
-                <option key={c.id} value={c.id}>
+                <option key={c.id} value={String(c.id ?? c.Id ?? "")}>
                   {c.nombre || c.descripcion || `Categoría ${c.id}`}
                 </option>
               ))}
