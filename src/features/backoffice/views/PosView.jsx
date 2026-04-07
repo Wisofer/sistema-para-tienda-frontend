@@ -1,5 +1,6 @@
-import React from "react";
+import React, { useState } from "react";
 import { PosProductOpcionesModal, PosProcesarVentaModal, PosVariantModal } from "../components/index.js";
+import { PosCartFloatingFab } from "../components/pos/PosCartFloatingFab.jsx";
 
 // Hook personalizado
 import { usePOS } from "../hooks/usePOS.js";
@@ -53,6 +54,10 @@ export function PosView({ currencySymbol = "C$" }) {
     addToCartWithOpcionesSeleccion,
   } = usePOS(currencySymbol);
 
+  /** Escritorio: carrito anclado a la derecha; al minimizar, catálogo a ancho completo + botón flotante. */
+  const [cartDocked, setCartDocked] = useState(true);
+  const cartUnits = cart.reduce((s, x) => s + Number(x.qty || 0), 0);
+
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col gap-4 overflow-hidden lg:flex-row">
       
@@ -83,9 +88,15 @@ export function PosView({ currencySymbol = "C$" }) {
       </section>
 
       {/* 2. Sección Derecha: Carrito / Resumen de Orden */}
-      <section className={`flex w-full flex-col overflow-hidden bg-white shadow-sm lg:w-96 lg:rounded-2xl lg:border lg:border-slate-200 ${
-        mobileTab === "products" ? "hidden lg:flex" : "flex"
-      }`}>
+      <section
+        className={`flex w-full flex-col overflow-hidden bg-white shadow-sm lg:w-96 lg:rounded-2xl lg:border lg:border-slate-200 ${
+          mobileTab === "products"
+            ? cartDocked
+              ? "hidden lg:flex"
+              : "hidden"
+            : `${cartDocked ? "flex lg:flex" : "flex lg:hidden"}`
+        }`}
+      >
         <PosCartSidebar
           cart={cart}
           handleUpdateQty={handleUpdateQty}
@@ -96,15 +107,16 @@ export function PosView({ currencySymbol = "C$" }) {
           currencySymbol={currencySymbol}
           actionBusy={actionBusy}
           isOnline={isOnline}
+          onRequestMinimize={() => setCartDocked(false)}
         />
       </section>
 
+      {!cartDocked ? (
+        <PosCartFloatingFab cartCount={cartUnits} onOpenCart={() => setCartDocked(true)} />
+      ) : null}
+
       {/* 3. Navegación Móvil (Bottom Bar) */}
-      <PosMobileNav
-        mobileTab={mobileTab}
-        setMobileTab={setMobileTab}
-        cartCount={cart.reduce((s, x) => s + x.qty, 0)}
-      />
+      <PosMobileNav mobileTab={mobileTab} setMobileTab={setMobileTab} cartCount={cartUnits} />
 
       {/* --- MODALES --- */}
 

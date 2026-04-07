@@ -1,5 +1,5 @@
 import React from "react";
-import { ShoppingCart, Trash2, Minus, Plus, Save, Image as ImageIcon } from "lucide-react";
+import { PanelRightClose, ShoppingCart, Trash2, Minus, Plus, Save, Image as ImageIcon } from "lucide-react";
 import { formatCurrency } from "../../utils/currency.js";
 import { offlineButtonTitle } from "../../../../constants/networkUi.js";
 import { compactVarianteEtiquetaCarrito } from "../../utils/posVariantes.js";
@@ -17,23 +17,38 @@ export function PosCartSidebar({
   currencySymbol,
   actionBusy,
   isOnline = true,
+  /** Solo escritorio: oculta el panel y muestra el botón flotante (más espacio al catálogo). */
+  onRequestMinimize,
 }) {
   return (
     <aside className="flex h-full w-full flex-col overflow-hidden bg-white lg:w-96 lg:rounded-2xl lg:border lg:border-slate-200 shadow-sm">
       {/* Header del Carrito */}
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white px-3 py-2.5 sm:px-4">
-        <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-tight text-slate-800">
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-slate-100 bg-white px-3 py-2.5 sm:px-4">
+        <h3 className="flex min-w-0 items-center gap-1.5 text-xs font-bold uppercase tracking-tight text-slate-800">
           <ShoppingCart className="h-4 w-4 shrink-0 text-blue-600" />
           Carrito
         </h3>
-        <button
-          type="button"
-          onClick={handleClearCart}
-          disabled={cart.length === 0 || actionBusy}
-          className="rounded-md bg-red-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-red-600 hover:bg-red-100 disabled:opacity-30 transition-colors"
-        >
-          Vaciar
-        </button>
+        <div className="flex shrink-0 items-center gap-1">
+          {onRequestMinimize ? (
+            <button
+              type="button"
+              onClick={onRequestMinimize}
+              className="hidden lg:inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+              title="Más espacio para ver productos"
+              aria-label="Minimizar carrito"
+            >
+              <PanelRightClose className="h-4 w-4" />
+            </button>
+          ) : null}
+          <button
+            type="button"
+            onClick={handleClearCart}
+            disabled={cart.length === 0 || actionBusy}
+            className="rounded-md bg-red-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-red-600 hover:bg-red-100 disabled:opacity-30 transition-colors"
+          >
+            Vaciar
+          </button>
+        </div>
       </div>
 
       {/* Listado de Items en el Carrito */}
