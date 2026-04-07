@@ -14,7 +14,7 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
   const sizes = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl", "2xl": "max-w-3xl", "3xl": "max-w-4xl" };
 
   return (
-    <div className="fixed inset-0 z-50 flex min-h-0 items-end justify-center overflow-y-auto overscroll-y-contain p-0 pb-[env(safe-area-inset-bottom,0px)] pt-2 sm:items-center sm:p-4">
+    <div className="fixed inset-0 z-50 flex min-h-0 items-center justify-center overflow-y-auto overscroll-y-contain p-3 pb-[max(0.75rem,env(safe-area-inset-bottom,0px))] pt-[max(0.75rem,env(safe-area-inset-top,0px))] sm:p-4">
       <div
         className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm"
         onClick={onClose}
@@ -25,7 +25,7 @@ export function Modal({ open, onClose, title, children, size = "md" }) {
         aria-modal="true"
         aria-labelledby="modal-title"
         className={cn(
-          "relative z-10 mx-auto w-full max-h-[min(88dvh,92vh)] overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:max-h-[min(90dvh,92vh)] sm:rounded-xl",
+          "relative z-10 mx-auto w-full max-h-[min(88dvh,92vh)] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl dark:border-slate-700 dark:bg-slate-900 sm:max-h-[min(90dvh,92vh)]",
           sizes[size]
         )}
       >

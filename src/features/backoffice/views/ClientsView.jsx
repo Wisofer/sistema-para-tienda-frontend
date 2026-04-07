@@ -149,54 +149,108 @@ export function ClientsView() {
         <BackofficeListSkeletonLoading rows={8} maxWidth="7xl" />
       ) : (
         <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-slate-600">
-              <tr>
-                <th className="px-6 py-3 font-semibold">Nombre</th>
-                <th className="px-6 py-3 font-semibold">RUC / Cédula</th>
-                <th className="px-6 py-3 font-semibold">Teléfono</th>
-                <th className="px-6 py-3 font-semibold hidden md:table-cell">Email</th>
-                <th className="px-6 py-3 font-semibold text-right">Acciones</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {rows.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
-                    No hay clientes que coincidan.
-                  </td>
-                </tr>
-              )}
-              {rows.map((c) => (
-                <tr key={c.id ?? `${c.nombre}-${c.ruc}`} className="hover:bg-slate-50/50 transition-colors">
-                  <td className="px-6 py-4 font-medium text-slate-800">{c.nombre}</td>
-                  <td className="px-6 py-4 text-slate-600">{c.ruc}</td>
-                  <td className="px-6 py-4 text-slate-600">{c.telefono}</td>
-                  <td className="px-6 py-4 text-slate-600 hidden md:table-cell">{c.email || "—"}</td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      <button
-                        type="button"
-                        title="Editar"
-                        onClick={() => openEdit(c)}
-                        className="p-1 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50"
-                      >
-                        <Pencil className="h-5 w-5" />
-                      </button>
-                      <button
-                        type="button"
-                        title="Eliminar"
-                        onClick={() => setConfirmDelete({ open: true, row: c })}
-                        className="p-1 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50"
-                      >
-                        <Trash2 className="h-5 w-5" />
-                      </button>
+          {/* Móvil: tarjetas */}
+          <div className="md:hidden divide-y divide-slate-100">
+            {rows.length === 0 && (
+              <p className="px-4 py-10 text-center text-sm text-slate-500">No hay clientes que coincidan.</p>
+            )}
+            {rows.map((c) => (
+              <article
+                key={c.id ?? `${c.nombre}-${c.ruc}`}
+                className="flex gap-3 p-4 hover:bg-slate-50/80"
+              >
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <p className="font-semibold leading-snug text-slate-900">{c.nombre}</p>
+                  <dl className="grid grid-cols-1 gap-1 text-xs text-slate-600 sm:grid-cols-2">
+                    <div>
+                      <dt className="text-slate-400">RUC / Cédula</dt>
+                      <dd className="font-medium text-slate-700">{c.ruc}</dd>
                     </div>
-                  </td>
+                    <div>
+                      <dt className="text-slate-400">Teléfono</dt>
+                      <dd className="font-medium text-slate-700">{c.telefono}</dd>
+                    </div>
+                    {c.email ? (
+                      <div className="col-span-1 min-w-0 sm:col-span-2">
+                        <dt className="text-slate-400">Email</dt>
+                        <dd className="truncate font-medium text-slate-700">{c.email}</dd>
+                      </div>
+                    ) : null}
+                  </dl>
+                </div>
+                <div className="flex shrink-0 flex-col gap-1">
+                  <button
+                    type="button"
+                    title="Editar"
+                    onClick={() => openEdit(c)}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-primary-50 hover:text-primary-600"
+                  >
+                    <Pencil className="h-5 w-5" />
+                  </button>
+                  <button
+                    type="button"
+                    title="Eliminar"
+                    onClick={() => setConfirmDelete({ open: true, row: c })}
+                    className="rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                  >
+                    <Trash2 className="h-5 w-5" />
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+
+          {/* Tablet/desktop: tabla con scroll horizontal de respaldo */}
+          <div className="hidden overflow-x-auto md:block">
+            <table className="w-full min-w-[640px] text-left text-sm">
+              <thead className="bg-slate-50 text-slate-600">
+                <tr>
+                  <th className="px-4 py-3 font-semibold lg:px-6">Nombre</th>
+                  <th className="px-4 py-3 font-semibold lg:px-6">RUC / Cédula</th>
+                  <th className="px-4 py-3 font-semibold lg:px-6">Teléfono</th>
+                  <th className="px-4 py-3 font-semibold lg:px-6">Email</th>
+                  <th className="px-4 py-3 text-right font-semibold lg:px-6">Acciones</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {rows.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                      No hay clientes que coincidan.
+                    </td>
+                  </tr>
+                )}
+                {rows.map((c) => (
+                  <tr key={c.id ?? `${c.nombre}-${c.ruc}`} className="transition-colors hover:bg-slate-50/50">
+                    <td className="px-4 py-4 font-medium text-slate-800 lg:px-6">{c.nombre}</td>
+                    <td className="px-4 py-4 text-slate-600 lg:px-6">{c.ruc}</td>
+                    <td className="px-4 py-4 text-slate-600 lg:px-6">{c.telefono}</td>
+                    <td className="px-4 py-4 text-slate-600 lg:px-6">{c.email || "—"}</td>
+                    <td className="px-4 py-4 text-right lg:px-6">
+                      <div className="flex justify-end gap-2">
+                        <button
+                          type="button"
+                          title="Editar"
+                          onClick={() => openEdit(c)}
+                          className="rounded-lg p-1 text-slate-400 hover:bg-primary-50 hover:text-primary-600"
+                        >
+                          <Pencil className="h-5 w-5" />
+                        </button>
+                        <button
+                          type="button"
+                          title="Eliminar"
+                          onClick={() => setConfirmDelete({ open: true, row: c })}
+                          className="rounded-lg p-1 text-slate-400 hover:bg-red-50 hover:text-red-600"
+                        >
+                          <Trash2 className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           {totalPages > 1 && (
             <div className="flex items-center justify-end gap-2 border-t border-slate-100 px-4 py-3">
               <button
@@ -225,43 +279,62 @@ export function ClientsView() {
 
       {modalOpen && (
         <BackofficeDialog maxWidthClass="max-w-md" onBackdropClick={saving ? undefined : () => setModalOpen(false)}>
-          <form onSubmit={saveCliente} className="w-full min-w-0 space-y-3">
-            <h3 className="text-lg font-semibold text-slate-800">{form.id ? "Editar cliente" : "Nuevo cliente"}</h3>
-            <input
-              value={form.nombre}
-              onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              placeholder="Nombre *"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              required
-            />
-            <input
-              value={form.ruc}
-              onChange={(e) => setForm((f) => ({ ...f, ruc: e.target.value }))}
-              placeholder="RUC / Cédula"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-            <input
-              value={form.telefono}
-              onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
-              placeholder="Teléfono"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-              placeholder="Email"
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-            />
-            <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600">
+          <form onSubmit={saveCliente} className="flex w-full min-w-0 flex-col">
+            <h3 className="shrink-0 text-lg font-semibold text-slate-800">
+              {form.id ? "Editar cliente" : "Nuevo cliente"}
+            </h3>
+            <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] pb-1">
+              <input
+                name="nombre"
+                autoComplete="name"
+                enterKeyHint="next"
+                value={form.nombre}
+                onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+                placeholder="Nombre *"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base text-slate-900 sm:text-sm"
+                required
+              />
+              <input
+                name="ruc"
+                autoComplete="off"
+                enterKeyHint="next"
+                value={form.ruc}
+                onChange={(e) => setForm((f) => ({ ...f, ruc: e.target.value }))}
+                placeholder="RUC / Cédula"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base text-slate-900 sm:text-sm"
+              />
+              <input
+                name="telefono"
+                type="tel"
+                autoComplete="tel"
+                enterKeyHint="next"
+                inputMode="tel"
+                value={form.telefono}
+                onChange={(e) => setForm((f) => ({ ...f, telefono: e.target.value }))}
+                placeholder="Teléfono"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base text-slate-900 sm:text-sm"
+              />
+              <input
+                name="email"
+                type="email"
+                autoComplete="email"
+                enterKeyHint="done"
+                inputMode="email"
+                value={form.email}
+                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
+                placeholder="Email"
+                className="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-base text-slate-900 sm:text-sm"
+              />
+            </div>
+            <div className="mt-4 flex shrink-0 flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600">
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={saving || !isOnline}
                 title={offlineButtonTitle(isOnline)}
-                className="rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                className="rounded-lg bg-primary-600 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-50"
               >
                 {saving ? "Guardando..." : "Guardar"}
               </button>

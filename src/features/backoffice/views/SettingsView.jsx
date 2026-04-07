@@ -5,6 +5,12 @@ import { BackofficeDialog, BackofficeListSkeletonLoading, BackofficePageShell } 
 import { useAuth } from "../../../contexts/AuthContext.jsx";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
+import {
+  modalFormBodyScrollClass,
+  modalFormFooterClass,
+  modalFormRootClass,
+  modalInputTouchClass,
+} from "../utils/modalResponsiveClasses.js";
 
 export function SettingsView() {
   const { user } = useAuth();
@@ -215,7 +221,10 @@ export function SettingsView() {
                   const clave = cfg?.clave ?? cfg?.Clave ?? `cfg-${i}`;
                   const valor = cfg?.valor ?? cfg?.Valor ?? "";
                   return (
-                    <li key={String(clave)} className="flex items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
+                    <li
+                      key={String(clave)}
+                      className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
+                    >
                       <div className="min-w-0">
                         <p className="text-sm font-semibold text-slate-800">{clave}</p>
                         <p className="truncate text-xs text-slate-500">{String(valor)}</p>
@@ -266,8 +275,8 @@ export function SettingsView() {
         <div className="md:col-span-12 lg:col-span-5">
           <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
             <div className="border-b border-slate-100 p-6">
-              <div className="flex items-center justify-between">
-                <div>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="min-w-0">
                   <h3 className="text-sm font-bold text-slate-800">WhatsApp Marketing</h3>
                   <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Plantillas de Factura</p>
                 </div>
@@ -342,32 +351,56 @@ export function SettingsView() {
 
       {modalOpen && (
         <BackofficeDialog maxWidthClass="max-w-md" onBackdropClick={saving ? undefined : () => setModalOpen(false)}>
-          <form onSubmit={saveConfig} className="w-full min-w-0">
-            <h3 className="text-lg font-semibold text-slate-800">Editar configuración</h3>
-            <div className="mt-4 space-y-3">
-              <input value={configForm.clave} onChange={(e) => setConfigForm((f) => ({ ...f, clave: e.target.value }))} placeholder="Clave" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
-              <input value={configForm.valor} onChange={(e) => setConfigForm((f) => ({ ...f, valor: e.target.value }))} placeholder="Valor" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
-              <textarea value={configForm.descripcion} onChange={(e) => setConfigForm((f) => ({ ...f, descripcion: e.target.value }))} placeholder="Descripción (opcional)" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" rows={3} />
+          <form onSubmit={saveConfig} className={modalFormRootClass}>
+            <h3 className="shrink-0 text-lg font-semibold text-slate-800">Editar configuración</h3>
+            <div className={modalFormBodyScrollClass}>
+              <input
+                value={configForm.clave}
+                onChange={(e) => setConfigForm((f) => ({ ...f, clave: e.target.value }))}
+                placeholder="Clave"
+                className={modalInputTouchClass}
+                required
+              />
+              <input
+                value={configForm.valor}
+                onChange={(e) => setConfigForm((f) => ({ ...f, valor: e.target.value }))}
+                placeholder="Valor"
+                className={modalInputTouchClass}
+                required
+              />
+              <textarea
+                value={configForm.descripcion}
+                onChange={(e) => setConfigForm((f) => ({ ...f, descripcion: e.target.value }))}
+                placeholder="Descripción (opcional)"
+                className={modalInputTouchClass}
+                rows={3}
+              />
             </div>
-            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 sm:w-auto">Cancelar</button>
-              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">{saving ? "Guardando..." : "Guardar"}</button>
+            <div className={modalFormFooterClass}>
+              <button type="button" onClick={() => setModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 sm:w-auto">
+                Cancelar
+              </button>
+              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">
+                {saving ? "Guardando..." : "Guardar"}
+              </button>
             </div>
           </form>
         </BackofficeDialog>
       )}
       {templateModalOpen && (
         <BackofficeDialog maxWidthClass="max-w-lg" onBackdropClick={saving ? undefined : () => setTemplateModalOpen(false)}>
-          <form onSubmit={saveTemplate} className="w-full min-w-0">
-            <h3 className="text-lg font-semibold text-slate-800">{templateForm.id ? "Editar plantilla WhatsApp" : "Nueva plantilla WhatsApp"}</h3>
-            <div className="mt-4 space-y-3">
+          <form onSubmit={saveTemplate} className={modalFormRootClass}>
+            <h3 className="shrink-0 text-lg font-semibold text-slate-800">
+              {templateForm.id ? "Editar plantilla WhatsApp" : "Nueva plantilla WhatsApp"}
+            </h3>
+            <div className={modalFormBodyScrollClass}>
               <div>
                 <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Nombre *</label>
                 <input
                   value={templateForm.nombre}
                   onChange={(e) => setTemplateForm((f) => ({ ...f, nombre: e.target.value }))}
                   placeholder="Ej: Plantilla por Defecto"
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className={modalInputTouchClass}
                   required
                 />
               </div>
@@ -377,7 +410,7 @@ export function SettingsView() {
                   value={templateForm.contenido}
                   onChange={(e) => setTemplateForm((f) => ({ ...f, contenido: e.target.value }))}
                   placeholder={"Hola {NombreCliente},\n\nLe enviamos su factura:\n📄 Factura: {NumeroFactura}\n💰 Monto: C$ {Monto}\n..."}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                  className={modalInputTouchClass}
                   rows={8}
                   required
                 />
@@ -393,13 +426,21 @@ export function SettingsView() {
                 Activa
               </label>
               <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={templateForm.predeterminada} onChange={(e) => setTemplateForm((f) => ({ ...f, predeterminada: e.target.checked }))} />
+                <input
+                  type="checkbox"
+                  checked={templateForm.predeterminada}
+                  onChange={(e) => setTemplateForm((f) => ({ ...f, predeterminada: e.target.checked }))}
+                />
                 Marcar como predeterminada
               </label>
             </div>
-            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setTemplateModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 sm:w-auto">Cancelar</button>
-              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">{saving ? "Guardando..." : "Guardar"}</button>
+            <div className={modalFormFooterClass}>
+              <button type="button" onClick={() => setTemplateModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 sm:w-auto">
+                Cancelar
+              </button>
+              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">
+                {saving ? "Guardando..." : "Guardar"}
+              </button>
             </div>
           </form>
         </BackofficeDialog>

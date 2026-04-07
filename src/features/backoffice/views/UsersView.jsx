@@ -5,6 +5,12 @@ import { backofficeApi } from "../services/backofficeApi.js";
 import { BackofficeDialog, BackofficeListSkeletonLoading, BackofficePageShell } from "../components/index.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
+import {
+  modalFormBodyScrollClass,
+  modalFormFooterClass,
+  modalFormRootClass,
+  modalInputTouchClass,
+} from "../utils/modalResponsiveClasses.js";
 
 /** Valores del claim `Rol` en el JWT (alineado con políticas del API). */
 const ROLES_SISTEMA = [
@@ -149,8 +155,13 @@ export function UsersView() {
             Nuevo usuario
           </button>
         </div>
-        <div className="mb-4 flex flex-wrap gap-2">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar usuario" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
+        <div className="mb-4 flex min-w-0 flex-wrap gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar usuario"
+            className="min-w-0 flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm sm:min-w-[12rem] sm:flex-none"
+          />
           <select value={rol} onChange={(e) => setRol(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
             <option value="">Todos los roles</option>
             {ROLES_SISTEMA.map((r) => (
@@ -208,12 +219,32 @@ export function UsersView() {
       </div>
       {modalOpen && (
         <BackofficeDialog maxWidthClass="max-w-md" onBackdropClick={saving ? undefined : () => setModalOpen(false)}>
-          <form onSubmit={saveUser} className="w-full min-w-0">
-            <h3 className="text-lg font-semibold text-slate-800">{form.id ? "Editar usuario" : "Nuevo usuario"}</h3>
-            <div className="mt-4 space-y-3">
-              <input value={form.nombreUsuario} onChange={(e) => setForm((f) => ({ ...f, nombreUsuario: e.target.value }))} placeholder="Nombre de usuario" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
-              <input value={form.nombreCompleto} onChange={(e) => setForm((f) => ({ ...f, nombreCompleto: e.target.value }))} placeholder="Nombre completo" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
-              <select value={form.rol} onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required>
+          <form onSubmit={saveUser} className={modalFormRootClass}>
+            <h3 className="shrink-0 text-lg font-semibold text-slate-800">{form.id ? "Editar usuario" : "Nuevo usuario"}</h3>
+            <div className={modalFormBodyScrollClass}>
+              <input
+                name="nombreUsuario"
+                autoComplete="username"
+                value={form.nombreUsuario}
+                onChange={(e) => setForm((f) => ({ ...f, nombreUsuario: e.target.value }))}
+                placeholder="Nombre de usuario"
+                className={modalInputTouchClass}
+                required
+              />
+              <input
+                name="nombreCompleto"
+                autoComplete="name"
+                value={form.nombreCompleto}
+                onChange={(e) => setForm((f) => ({ ...f, nombreCompleto: e.target.value }))}
+                placeholder="Nombre completo"
+                className={modalInputTouchClass}
+              />
+              <select
+                value={form.rol}
+                onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))}
+                className={modalInputTouchClass}
+                required
+              >
                 {ROLES_SISTEMA.map((r) => (
                   <option key={r.value} value={r.value}>
                     {r.label}
@@ -225,10 +256,12 @@ export function UsersView() {
               </select>
               <input
                 type="password"
+                name="password"
+                autoComplete={form.id ? "new-password" : "new-password"}
                 value={form.contrasena}
                 onChange={(e) => setForm((f) => ({ ...f, contrasena: e.target.value }))}
                 placeholder={form.id ? "Nueva contraseña (opcional)" : "Contraseña"}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+                className={modalInputTouchClass}
                 required={!form.id}
               />
               <label className="inline-flex items-center gap-2 text-sm text-slate-700">
@@ -236,9 +269,13 @@ export function UsersView() {
                 Activo
               </label>
             </div>
-            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-              <button type="button" onClick={() => setModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 sm:w-auto">Cancelar</button>
-              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">{saving ? "Guardando..." : "Guardar"}</button>
+            <div className={modalFormFooterClass}>
+              <button type="button" onClick={() => setModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 sm:w-auto">
+                Cancelar
+              </button>
+              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">
+                {saving ? "Guardando..." : "Guardar"}
+              </button>
             </div>
           </form>
         </BackofficeDialog>

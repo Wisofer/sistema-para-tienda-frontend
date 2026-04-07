@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from "react";
 import { Eye, Search, X } from "lucide-react";
+import { cn } from "../../../../utils/cn.js";
 import { formatCurrency } from "../../utils/currency.js";
+import { tableHorizontalScrollClass } from "../../utils/modalResponsiveClasses.js";
 import { 
   cierreFechaRaw, 
   cierreHistorialMontoPrincipal, 
@@ -76,7 +78,7 @@ export function ReportTables({
       )}
 
       {/* Renderizado Condicional de Tablas */}
-      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm overflow-hidden">
+      <article className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-5">
         {activeReport === "productos-top" && <TopProductsTable rows={rows} currencySymbol={currencySymbol} />}
         {activeReport === "vendedores" && <VendedoresTable rows={rows} currencySymbol={currencySymbol} />}
         {activeReport === "categorias" && (
@@ -112,8 +114,8 @@ function TopProductsTable({ rows, currencySymbol }) {
   return (
     <>
       <h4 className="mb-4 text-base font-bold text-slate-800 uppercase tracking-tight">Top Productos</h4>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+      <div className={cn(tableHorizontalScrollClass)}>
+        <table className="min-w-[520px] w-full text-left text-sm">
           <thead className={REPORT_THEAD}>
             <tr>
               <th className="px-4 py-3">#</th>
@@ -147,8 +149,8 @@ function VendedoresTable({ rows, currencySymbol }) {
       <p className="mb-3 text-xs text-slate-500">
         Agrupado por usuario que registró el ticket en el POS (total neto alineado con otros reportes).
       </p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+      <div className={cn(tableHorizontalScrollClass)}>
+        <table className="min-w-[640px] w-full text-left text-sm">
           <thead className={REPORT_THEAD}>
             <tr>
               <th className="px-4 py-3">Vendedor</th>
@@ -195,8 +197,8 @@ function CategoriasTable({ rows, currencySymbol, openCategoriaDetail }) {
       <p className="mb-3 text-xs text-slate-500">
         Una fila por categoría. En acciones, el ícono del ojo abre el detalle de productos de esa categoría.
       </p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+      <div className={cn(tableHorizontalScrollClass)}>
+        <table className="min-w-[560px] w-full text-left text-sm">
           <thead className={REPORT_THEAD}>
             <tr>
               <th className="px-4 py-3">Categoría</th>
@@ -237,8 +239,8 @@ function CajaTable({ rows, currencySymbol }) {
   return (
     <>
       <h4 className="mb-4 text-base font-bold text-slate-800 uppercase tracking-tight">Historial de Caja</h4>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+      <div className={cn(tableHorizontalScrollClass)}>
+        <table className="min-w-[640px] w-full text-left text-sm">
           <thead className={REPORT_THEAD}>
             <tr>
               <th className="px-4 py-3">Cierre</th>
@@ -277,8 +279,8 @@ function MovimientosTable({ rows }) {
   return (
     <>
       <h4 className="mb-4 text-base font-bold text-slate-800 uppercase tracking-tight">Movimientos de Inventario</h4>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+      <div className={cn(tableHorizontalScrollClass)}>
+        <table className="min-w-[640px] w-full text-left text-sm">
           <thead className={REPORT_THEAD}>
             <tr>
               <th className="px-4 py-3">Fecha</th>
@@ -356,7 +358,7 @@ function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelV
             onChange={(e) => setTicketSearch(e.target.value)}
             placeholder="Buscar por ticket…"
             autoComplete="off"
-            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-base shadow-sm placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500 sm:py-2 sm:text-sm"
             aria-label="Buscar por número de ticket"
           />
         </div>
@@ -367,8 +369,8 @@ function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelV
           No hay tickets que coincidan con «{ticketSearch.trim()}». Prueba otro número o borra el filtro.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
+        <div className={cn(tableHorizontalScrollClass)}>
+          <table className="min-w-[920px] w-full text-left text-sm">
             <thead className={REPORT_THEAD}>
               <tr>
                 <th className="px-4 py-3">Ticket</th>

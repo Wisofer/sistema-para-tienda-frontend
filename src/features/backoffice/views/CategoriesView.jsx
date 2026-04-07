@@ -217,7 +217,103 @@ export function CategoriesView({
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="overflow-x-auto">
+        {/* Móvil: tarjetas */}
+        <div className="space-y-3 p-3 md:hidden">
+          {rows.length === 0 && (
+            <p className="rounded-xl border border-dashed border-slate-200 px-4 py-10 text-center text-sm text-slate-500">
+              No hay categorías. Crea una con «Nueva categoría».
+            </p>
+          )}
+          {rows.map(({ c, idx, id, count, activo, created }) => (
+            <article
+              key={id}
+              className={`rounded-xl border border-slate-200 p-4 ${activo ? "bg-white" : "bg-slate-50/90"}`}
+            >
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs text-slate-400">#{idx + 1}</p>
+                  {canOpenProducts ? (
+                    <button
+                      type="button"
+                      onClick={() => onOpenProducts(String(id))}
+                      className="mt-0.5 text-left text-base font-semibold text-primary-700 hover:underline"
+                    >
+                      {c.nombre || `Categoría ${id}`}
+                    </button>
+                  ) : (
+                    <p className="mt-0.5 text-base font-semibold text-slate-900">{c.nombre || `Categoría ${id}`}</p>
+                  )}
+                  <p className="mt-2 line-clamp-3 text-xs leading-relaxed text-slate-600">{c.descripcion || "—"}</p>
+                  <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                    {canOpenProducts ? (
+                      <button
+                        type="button"
+                        onClick={() => onOpenProducts(String(id))}
+                        className="font-semibold text-primary-700 hover:underline"
+                      >
+                        {count} producto{count === 1 ? "" : "s"}
+                      </button>
+                    ) : (
+                      <span className="text-slate-700">
+                        {count} producto{count === 1 ? "" : "s"}
+                      </span>
+                    )}
+                    <span className="text-slate-300">·</span>
+                    <span className="text-slate-500">Alta {formatCatDate(created)}</span>
+                  </div>
+                  <div className="mt-2">
+                    {activo ? (
+                      <span className="inline-flex rounded-md bg-emerald-50 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+                        Activa
+                      </span>
+                    ) : (
+                      <span className="inline-flex rounded-md bg-slate-200 px-2 py-0.5 text-xs font-semibold text-slate-700">
+                        Inactiva
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex shrink-0 flex-col gap-1">
+                  <button
+                    type="button"
+                    title="Editar"
+                    aria-label="Editar categoría"
+                    onClick={() => openEdit(id)}
+                    disabled={saving}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  {activo && (
+                    <button
+                      type="button"
+                      title="Desactivar"
+                      aria-label="Desactivar categoría"
+                      onClick={() => setConfirmAction({ open: true, type: "deactivate", id, name: c.nombre || "" })}
+                      disabled={saving}
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-amber-200 text-amber-800 hover:bg-amber-50 disabled:opacity-50"
+                    >
+                      <PowerOff className="h-4 w-4" />
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    title="Eliminar"
+                    aria-label="Eliminar categoría"
+                    onClick={() => setConfirmAction({ open: true, type: "delete", id, name: c.nombre || "" })}
+                    disabled={saving}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 text-red-700 hover:bg-red-50 disabled:opacity-50"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+
+        {/* Desktop: tabla */}
+        <div className="hidden overflow-x-auto md:block">
           <table className="min-w-[900px] w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold uppercase tracking-wide text-slate-500">
               <tr>
@@ -331,56 +427,68 @@ export function CategoriesView({
         </div>
       </section>
 
-      <BackofficeDialog open={modalOpen} onClose={() => setModalOpen(false)} maxWidthClass="max-w-lg">
-        <form onSubmit={saveCategory} className="w-full min-w-0 space-y-4">
-          <h3 className="text-lg font-semibold text-slate-800">
+      <BackofficeDialog
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onBackdropClick={saving ? undefined : () => setModalOpen(false)}
+        maxWidthClass="max-w-lg"
+      >
+        <form onSubmit={saveCategory} className="flex w-full min-w-0 flex-col">
+          <h3 className="shrink-0 text-lg font-semibold text-slate-800">
             {form.id ? "Editar categoría" : "Nueva categoría"}
           </h3>
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nombre</label>
-            <input
-              required
-              type="text"
-              value={form.nombre}
-              onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-primary-500 focus:bg-white focus:outline-none"
-              placeholder="Ej: Ropa, Calzado..."
-            />
+          <div className="mt-4 min-h-0 flex-1 space-y-4 overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] pb-1">
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Nombre</label>
+              <input
+                required
+                name="nombre"
+                type="text"
+                autoComplete="off"
+                enterKeyHint="next"
+                value={form.nombre}
+                onChange={(e) => setForm((f) => ({ ...f, nombre: e.target.value }))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base text-slate-900 focus:border-primary-500 focus:outline-none sm:py-2 sm:text-sm"
+                placeholder="Ej: Ropa, Calzado..."
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Descripción</label>
+              <textarea
+                name="descripcion"
+                value={form.descripcion}
+                onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-base text-slate-900 focus:border-primary-500 focus:outline-none sm:py-2 sm:text-sm"
+                rows={4}
+                placeholder="Opcional..."
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="cat-activo"
+                checked={form.activo}
+                onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))}
+                className="h-5 w-5 shrink-0 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
+              />
+              <label htmlFor="cat-activo" className="text-sm font-medium text-slate-700">
+                Categoría activa
+              </label>
+            </div>
           </div>
-          <div>
-            <label className="mb-1 block text-xs font-bold uppercase tracking-wider text-slate-500">Descripción</label>
-            <textarea
-              value={form.descripcion}
-              onChange={(e) => setForm((f) => ({ ...f, descripcion: e.target.value }))}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-primary-500 focus:bg-white focus:outline-none"
-              rows={3}
-              placeholder="Opcional..."
-            />
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="cat-activo"
-              checked={form.activo}
-              onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))}
-              className="h-5 w-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
-            />
-            <label htmlFor="cat-activo" className="text-sm font-medium text-slate-700">
-              Categoría activa
-            </label>
-          </div>
-          <div className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:justify-end">
+          <div className="mt-4 flex shrink-0 flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="w-full rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100 sm:w-auto"
+              disabled={saving}
+              className="w-full rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 sm:w-auto"
             >
               Cancelar
             </button>
             <button
               type="submit"
               disabled={saving}
-              className="w-full rounded-xl bg-primary-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:opacity-50 sm:w-auto"
+              className="w-full rounded-xl bg-primary-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:opacity-50 sm:w-auto"
             >
               {saving ? "Guardando..." : "Guardar"}
             </button>

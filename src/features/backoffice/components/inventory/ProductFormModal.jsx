@@ -11,6 +11,8 @@ import { Upload, X } from "lucide-react";
 import { useOnlineStatus } from "../../../../hooks/useOnlineStatus.js";
 import { useSnackbar } from "../../../../contexts/SnackbarContext.jsx";
 import { NETWORK_UI, offlineButtonTitle } from "../../../../constants/networkUi.js";
+import { cn } from "../../../../utils/cn.js";
+import { modalFormBodyScrollPlainClass, modalFormFooterClass, modalFormRootClass } from "../../utils/modalResponsiveClasses.js";
 
 /**
  * Modal para la creación y edición de productos.
@@ -47,14 +49,14 @@ export function ProductFormModal({
       panelClassName="sm:mx-auto"
       onBackdropClick={saving ? undefined : () => setModalOpen(false)}
     >
-      <form onSubmit={handleSubmit} className="flex w-full min-w-0 flex-col">
+      <form onSubmit={handleSubmit} className={modalFormRootClass}>
         {/* Título dinámico */}
-        <h3 className="text-base font-semibold leading-tight text-slate-800 sm:text-lg">
+        <h3 className="shrink-0 text-base font-semibold leading-tight text-slate-800 sm:text-lg">
           {form.id ? "Editar producto" : "Nuevo producto"}
         </h3>
 
         {/* Grid de Campos */}
-        <div className="mt-4 grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 sm:items-start sm:gap-x-6 sm:gap-y-3">
+        <div className={`${modalFormBodyScrollPlainClass} grid grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 sm:items-start sm:gap-x-6 sm:gap-y-3`}>
           {/* Código SKU: mismo comportamiento visual que «Stock actual» al editar (disabled + estilos) */}
           <label className="min-w-0 block text-xs font-semibold text-slate-600">
             Código
@@ -264,7 +266,7 @@ export function ProductFormModal({
         </div>
 
         {/* Acciones del Modal */}
-        <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <div className={cn(modalFormFooterClass, "mt-8 gap-3")}>
           <button
             type="button"
             disabled={saving}

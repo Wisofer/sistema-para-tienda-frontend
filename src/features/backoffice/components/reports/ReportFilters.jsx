@@ -34,7 +34,7 @@ export function ReportFilters({
   };
 
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+    <article className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-base font-semibold text-slate-900 sm:text-lg">
@@ -117,11 +117,11 @@ export function ReportFilters({
           </div>
         )}
 
-        <div className="flex gap-2 md:col-span-2">
+        <div className="flex min-w-0 flex-col gap-2 sm:flex-row md:col-span-2">
           <button
             type="button"
             onClick={() => loadReportData(activeReport)}
-            className="flex-1 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
+            className="min-h-[44px] flex-1 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 sm:min-h-0"
           >
             Aplicar filtros
           </button>
@@ -129,7 +129,7 @@ export function ReportFilters({
             type="button"
             onClick={() => downloadExcel(activeReport)}
             disabled={exporting}
-            className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
+            className="min-h-[44px] flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60 sm:min-h-0"
           >
             {exporting ? "Exportando…" : "Exportar Excel"}
           </button>

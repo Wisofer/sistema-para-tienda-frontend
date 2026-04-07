@@ -1,6 +1,12 @@
 import React from "react";
 import { Search, Package } from "lucide-react";
 import { BackofficeDialog } from "../../components/index.js";
+import {
+  modalFormBodyScrollPlainClass,
+  modalFormFooterClass,
+  modalFormRootClass,
+} from "../../utils/modalResponsiveClasses.js";
+import { cn } from "../../../../utils/cn.js";
 
 /**
  * Modal para movimientos de stock (Entrada, Salida, Ajuste).
@@ -25,20 +31,18 @@ export function StockMovementModal({
 
   return (
     <BackofficeDialog onBackdropClick={saving ? undefined : () => setStockModalOpen(false)} maxWidthClass="max-w-md">
-      <form onSubmit={submitStockAction} className="flex w-full flex-col">
+      <form onSubmit={submitStockAction} className={modalFormRootClass}>
         {/* Título dinámico */}
-        <h3 className="text-lg font-bold text-slate-800 tracking-tight">
+        <h3 className="shrink-0 text-lg font-bold tracking-tight text-slate-800">
           {stockMode === "entrada"
             ? "Entrada de Inventario"
             : stockMode === "salida"
             ? "Salida de Inventario"
             : "Ajuste de Stock"}
         </h3>
-        <p className="mt-1 text-xs text-slate-500 uppercase font-black tracking-widest">
-          {stockMode}
-        </p>
+        <p className="mt-1 shrink-0 text-xs font-black uppercase tracking-widest text-slate-500">{stockMode}</p>
 
-        <div className="mt-4 space-y-4">
+        <div className={cn(modalFormBodyScrollPlainClass, "space-y-4")}>
           {/* Buscador de Producto */}
           <div className="relative">
             <label className="text-xs font-bold text-slate-600 uppercase tracking-widest">
@@ -227,18 +231,18 @@ export function StockMovementModal({
         </div>
 
         {/* Botones */}
-        <div className="mt-8 flex gap-3">
+        <div className={cn(modalFormFooterClass, "!flex-row flex-wrap gap-3")}>
           <button
             type="button"
             onClick={() => setStockModalOpen(false)}
-            className="flex-1 rounded-xl border border-slate-200 py-4 text-sm font-bold text-slate-500 hover:bg-slate-50 transition-colors"
+            className="min-h-[44px] flex-1 rounded-xl border border-slate-200 py-3 text-sm font-bold text-slate-500 transition-colors hover:bg-slate-50 sm:min-h-0"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={saving}
-            className="flex-1 rounded-xl bg-slate-900 py-4 text-sm font-bold text-white shadow-xl shadow-slate-200 hover:bg-black transition-all active:scale-[0.98] disabled:opacity-50"
+            className="min-h-[44px] flex-1 rounded-xl bg-slate-900 py-3 text-sm font-bold text-white shadow-xl shadow-slate-200 transition-all hover:bg-black active:scale-[0.98] disabled:opacity-50 sm:min-h-0"
           >
             {saving ? "Aplicando..." : "Confirmar"}
           </button>

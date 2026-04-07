@@ -32,8 +32,10 @@ export function ProvidersView() {
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-slate-600">Proveedores usados en productos y en entradas de stock.</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <p className="min-w-0 text-sm leading-relaxed text-slate-600">
+            Proveedores usados en productos y en entradas de stock.
+          </p>
           <button
             type="button"
             onClick={openCreate}
