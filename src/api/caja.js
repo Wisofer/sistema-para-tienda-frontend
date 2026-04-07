@@ -12,7 +12,7 @@ function qs(params) {
 export const cajaApi = {
   estado: () => api.get(`${base}/estado`),
   apertura: (montoInicial) => api.post(`${base}/apertura`, { montoInicial }),
-  cierrePreview: () => api.get(`${base}/cierre/preview`),
+  cierrePreview: (params) => api.get(`${base}/cierre/preview${qs(params || {})}`),
   cierre: (body) => api.post(`${base}/cierre`, body),
   historial: (params) => api.get(`${base}/historial${qs(params)}`),
 };

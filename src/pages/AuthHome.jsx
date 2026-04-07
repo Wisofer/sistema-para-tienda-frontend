@@ -5,6 +5,7 @@ import { BackofficeShellHeaderActions, MobileNav, SidebarNav } from "../features
 import { NAV_ITEMS } from "../features/backoffice/constants.js";
 import { backofficeApi } from "../features/backoffice/services/backofficeApi.js";
 import { PAGINATION } from "../features/backoffice/constants/pagination.js";
+import { POS_INVENTORY_UPDATED_EVENT } from "../features/backoffice/constants/posEvents.js";
 import { DEFAULT_TIPO_CAMBIO_USD, resolveCurrencySymbol } from "../features/backoffice/utils/currency.js";
 import { pickPortalTagline } from "../features/backoffice/utils/portalConfig.js";
 import { canAccessView, getAllowedViewIds } from "../features/backoffice/utils/auth.js";
@@ -181,11 +182,11 @@ export function AuthHome() {
     void refreshLowStock();
     const onRefresh = () => void refreshLowStock();
     window.addEventListener("focus", onRefresh);
-    window.addEventListener("pos-inventory-updated", onRefresh);
+    window.addEventListener(POS_INVENTORY_UPDATED_EVENT, onRefresh);
     const interval = setInterval(onRefresh, 90_000);
     return () => {
       window.removeEventListener("focus", onRefresh);
-      window.removeEventListener("pos-inventory-updated", onRefresh);
+      window.removeEventListener(POS_INVENTORY_UPDATED_EVENT, onRefresh);
       clearInterval(interval);
     };
   }, [refreshLowStock]);
@@ -206,7 +207,7 @@ export function AuthHome() {
   const showViewHeader = true;
 
   return (
-    <main className="min-h-screen min-w-0 bg-slate-100 p-4 md:p-6">
+    <main className="app-shell-atmosphere min-h-screen min-w-0 p-4 md:p-6">
       <MobileNav
         open={mobileMenuOpen}
         setOpen={setMobileMenuOpen}
@@ -248,14 +249,14 @@ export function AuthHome() {
 
         <section className="flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto hide-scrollbar pb-24 sm:gap-6 lg:max-h-full lg:pb-0 lg:pr-2">
           {showViewHeader && (
-            <header className="shrink-0 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-6">
+            <header className="shrink-0 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm sm:p-5">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
                 <div className="min-w-0 flex-1">
-                  <h1 className="text-xl font-bold leading-tight text-slate-800 sm:text-2xl">
+                  <h1 className="text-lg font-semibold leading-snug tracking-tight text-slate-900 sm:text-xl">
                     {TITLES[activeView] || `Hola ${displayUserName(user) || "equipo"} 👋`}
                   </h1>
                   {portalTagline ? (
-                    <p className="mt-1 text-xs text-slate-500 sm:text-sm">{portalTagline}</p>
+                    <p className="mt-1 text-sm text-slate-600">{portalTagline}</p>
                   ) : null}
                 </div>
                 <div className="hidden shrink-0 lg:block">

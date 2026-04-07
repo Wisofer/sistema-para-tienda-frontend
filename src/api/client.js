@@ -122,6 +122,67 @@ async function request(path, options = {}, retryOnUnauthorized = true, withEnvel
   return unwrapApiResponse(json);
 }
 
+/**
+ * GET con Authorization y refresh de token (respuesta no JSON: PDF, binarios).
+ */
+export async function fetchWithAuth(path, options = {}, retryOnUnauthorized = true) {
+  const url = `${getApiUrl()}${path.startsWith("/") ? path : `/${path}`}`;
+  const token = getToken();
+  let headers = { ...options.headers };
+  if (!(options.body instanceof FormData) && options.body != null && !headers["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+  if (!isAuthPublicRequest(path) && token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+  let res = await fetch(url, { ...options, headers });
+  if (res.status === 401) {
+    if (retryOnUnauthorized && !isAuthPublicRequest(path)) {
+      const newAccessToken = await runRefreshTokenFlow();
+      if (newAccessToken) {
+        headers.Authorization = `Bearer ${newAccessToken}`;
+        res = await fetch(url, { ...options, headers });
+      } else {
+        clearToken();
+        onUnauthorized();
+      }
+    } else if (!isAuthPublicRequest(path)) {
+      clearToken();
+      onUnauthorized();
+    }
+  }
+  return res;
+}
+
+/**
+ * Descarga binaria (p. ej. ticket PDF). Errores JSON de ApiResponse se convierten en Error con mensaje.
+ */
+export async function fetchBlob(path) {
+  const res = await fetchWithAuth(path, { method: "GET" });
+  const ct = (res.headers.get("content-type") || "").toLowerCase();
+  if (!res.ok) {
+    const text = await res.text();
+    let errMsg = text;
+    try {
+      const data = JSON.parse(text);
+      errMsg =
+        data.message ||
+        data.Message ||
+        data.error ||
+        data.Error ||
+        text;
+    } catch (_) {}
+    const err = new Error(typeof errMsg === "string" && errMsg.trim() ? errMsg.trim() : `Error HTTP ${res.status}`);
+    err.status = res.status;
+    throw err;
+  }
+  if (ct.includes("application/json")) {
+    const json = await res.json();
+    return unwrapApiResponse(json);
+  }
+  return res.blob();
+}
+
 export const api = {
   get: (path) => request(path, { method: "GET" }),
   post: (path, body) => request(path, { method: "POST", body }),

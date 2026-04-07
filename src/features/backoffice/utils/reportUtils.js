@@ -81,3 +81,120 @@ export function categoriaReporteNombre(row, index) {
     `Categoría ${index + 1}`
   );
 }
+
+/**
+ * Monto del reporte “ventas por categoría” según nombres habituales en API (.NET / front).
+ */
+export function reporteCategoriaMonto(row) {
+  const r = row || {};
+  const raw =
+    r.total ??
+    r.Total ??
+    r.venta ??
+    r.Venta ??
+    r.totalNeto ??
+    r.TotalNeto ??
+    r.totalVentas ??
+    r.TotalVentas ??
+    r.montoTotal ??
+    r.MontoTotal ??
+    r.monto ??
+    r.Monto ??
+    r.importe ??
+    r.Importe ??
+    0;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Normaliza la respuesta de GET /reportes/ventas/{id}/ticket-detalle para el modal de detalle.
+ */
+export function normalizeReporteTicketDetalle(raw) {
+  const d =
+    raw && typeof raw === "object"
+      ? raw.data ?? raw.Data ?? raw
+      : null;
+  if (!d || typeof d !== "object") {
+    return {
+      kind: "ticket",
+      numero: "-",
+      fecha: "",
+      estado: "",
+      items: [],
+      total: 0,
+      subtotalLineas: 0,
+      totalCobrado: 0,
+      cantidadLineas: 0,
+      cantidadUnidades: 0,
+    };
+  }
+  const lineas = d.lineas ?? d.Lineas ?? [];
+
+  /** Alineado con ticket-detalle: productoNombre (oficial), nombreProducto (serialización C# antigua), codigoProducto como respaldo. */
+  function pickLineaProductoEtiqueta(l) {
+    const name =
+      l.productoNombre ??
+      l.ProductoNombre ??
+      l.nombreProducto ??
+      l.NombreProducto ??
+      l.nombre ??
+      l.Nombre ??
+      l.producto ??
+      l.Producto ??
+      "";
+    const code = l.codigoProducto ?? l.CodigoProducto ?? "";
+    const n = String(name).trim();
+    if (n) return n;
+    const c = String(code).trim();
+    if (c) return c;
+    return "-";
+  }
+
+  const items = Array.isArray(lineas)
+    ? lineas.map((l, i) => {
+        const cant = Number(l.cantidad ?? l.Cantidad ?? 0);
+        const pu = Number(l.precioUnitario ?? l.PrecioUnitario ?? l.precio ?? l.Precio ?? 0);
+        const sub = Number(
+          l.subtotal ??
+            l.Subtotal ??
+            l.subtotalLinea ??
+            l.totalLinea ??
+            l.TotalLinea ??
+            (Number.isFinite(cant) && Number.isFinite(pu) ? cant * pu : 0)
+        );
+        return {
+          id: l.id ?? l.Id ?? l.productoId ?? l.ProductoId ?? i,
+          servicio: null,
+          producto: pickLineaProductoEtiqueta(l),
+          cantidad: cant,
+          precioUnitario: pu,
+          monto: sub,
+          variante: l.talla ?? l.Talla ?? l.variante ?? l.Variante ?? l.varianteDescripcion ?? "",
+        };
+      })
+    : [];
+
+  const subtotalLineas = Number(d.subtotalLineas ?? d.SubtotalLineas ?? 0);
+  const totalCobrado = Number(d.totalCobrado ?? d.TotalCobrado ?? d.total ?? d.Total ?? 0);
+
+  return {
+    kind: "ticket",
+    numero:
+      d.numeroTicket ?? d.NumeroTicket ?? d.numero ?? d.Numero ?? d.ticket ?? d.Ticket ?? "-",
+    fecha: d.fecha ?? d.Fecha ?? "",
+    estado: d.estado ?? d.Estado ?? "",
+    clienteNombre:
+      d.cliente ?? d.Cliente ?? d.clienteNombre ?? d.ClienteNombre ?? "",
+    subtotalLineas,
+    totalCobrado,
+    cantidadLineas: Number(d.cantidadLineas ?? d.CantidadLineas ?? items.length),
+    cantidadUnidades: Number(
+      d.cantidadUnidades ??
+        d.CantidadUnidades ??
+        items.reduce((s, it) => s + Number(it.cantidad || 0), 0)
+    ),
+    items,
+    total: totalCobrado || subtotalLineas,
+  };
+}

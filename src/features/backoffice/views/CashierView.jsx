@@ -1,5 +1,5 @@
 import React from "react";
-import { BackofficeListSkeletonLoading } from "../components/index.js";
+import { BackofficeListSkeletonLoading, BackofficePageShell } from "../components/index.js";
 
 // Hook Personalizado
 import { useCashier } from "../hooks/useCashier.js";
@@ -43,7 +43,7 @@ export function CashierView({ currencySymbol = "C$" }) {
   } = useCashier();
 
   // Pantalla de carga inicial
-  if (loading) return <BackofficeListSkeletonLoading rows={5} maxWidth="3xl" />;
+  if (loading) return <BackofficeListSkeletonLoading rows={5} maxWidth="4xl" />;
 
   // Cálculos de resumen (Extraídos para claridad)
   const totalEfectivo = preview?.totales?.efectivo ?? preview?.efectivo ?? 0;
@@ -60,7 +60,7 @@ export function CashierView({ currencySymbol = "C$" }) {
   const cajaAbierta = estado?.abierta || estado?.estado === "Abierto";
 
   return (
-    <div className="mx-auto min-w-0 max-w-3xl space-y-6">
+    <BackofficePageShell maxWidth="4xl" className="space-y-5">
       {/* Mensaje de Error Global */}
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 animate-in fade-in slide-in-from-top-2">
@@ -101,6 +101,7 @@ export function CashierView({ currencySymbol = "C$" }) {
           totalTarjeta={totalTarjeta}
           totalTransferencia={totalTransferencia}
           montoEsperadoCalculado={montoEsperadoCalculado}
+          montoInicialActual={montoInicialActual}
           currencySymbol={currencySymbol}
         />
       )}
@@ -118,6 +119,6 @@ export function CashierView({ currencySymbol = "C$" }) {
         processing={processing}
         currencySymbol={currencySymbol}
       />
-    </div>
+    </BackofficePageShell>
   );
 }

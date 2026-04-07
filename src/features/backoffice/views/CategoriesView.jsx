@@ -10,7 +10,7 @@ import {
 import { backofficeApi } from "../services/backofficeApi.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
-import { BackofficeDialog } from "../components/index.js";
+import { BackofficeDialog, BackofficePageShell } from "../components/index.js";
 
 export function CategoriesView() {
   const snackbar = useSnackbar();
@@ -103,7 +103,7 @@ export function CategoriesView() {
   };
 
   return (
-    <div className="space-y-4">
+    <BackofficePageShell maxWidth="7xl" className="space-y-4">
       <section className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
@@ -112,12 +112,12 @@ export function CategoriesView() {
             placeholder="Buscar categorías..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none shadow-sm"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-4 text-sm shadow-sm focus:border-primary-500 focus:outline-none"
           />
         </div>
         <button
           onClick={openCreate}
-          className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-bold text-white shadow-lg shadow-blue-100 hover:bg-blue-700 transition active:scale-95"
+            className="inline-flex items-center gap-2 rounded-xl bg-primary-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
         >
           <Plus className="h-5 w-5" />
           Nueva Categoría
@@ -165,7 +165,7 @@ export function CategoriesView() {
                   <tr key={cat.id} className="hover:bg-slate-50/50 transition">
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="rounded-lg bg-blue-50 p-2 text-blue-600">
+                        <div className="rounded-lg bg-primary-50 p-2 text-primary-600">
                           <Tag className="h-5 w-5" />
                         </div>
                         <div>
@@ -218,7 +218,7 @@ export function CategoriesView() {
               type="text"
               value={form.nombre}
               onChange={(e) => setForm({ ...form, nombre: e.target.value })}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-primary-500 focus:bg-white focus:outline-none"
               placeholder="Ej: Ropa, Calzado..."
             />
           </div>
@@ -227,7 +227,7 @@ export function CategoriesView() {
             <textarea
               value={form.descripcion}
               onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-blue-500 focus:bg-white focus:outline-none"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2 text-sm focus:border-primary-500 focus:bg-white focus:outline-none"
               rows="3"
               placeholder="Opcional..."
             />
@@ -238,7 +238,7 @@ export function CategoriesView() {
               id="cat-activo"
               checked={form.activo}
               onChange={(e) => setForm({ ...form, activo: e.target.checked })}
-              className="h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+              className="h-5 w-5 rounded border-slate-300 text-primary-600 focus:ring-primary-500"
             />
             <label htmlFor="cat-activo" className="text-sm font-medium text-slate-700">Categoría activa</label>
           </div>
@@ -253,7 +253,7 @@ export function CategoriesView() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl bg-blue-600 px-6 py-2 text-sm font-bold text-white shadow-lg shadow-blue-100 hover:bg-blue-700 disabled:opacity-50"
+              className="rounded-xl bg-primary-600 px-6 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-700 disabled:opacity-50"
             >
               {saving ? "Guardando..." : "Guardar"}
             </button>
@@ -268,6 +268,6 @@ export function CategoriesView() {
         title="¿Eliminar Categoría?"
         description="Esta acción marcará la categoría como inactiva o la eliminará. Los productos asociados no se eliminarán pero podrían quedar sin categoría."
       />
-    </div>
+    </BackofficePageShell>
   );
 }

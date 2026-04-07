@@ -27,20 +27,27 @@ export function useCashier() {
   const loadAll = useCallback(async (page = historialPage) => {
     setError("");
     try {
-      const [e, prev, hist] = await Promise.all([
-        backofficeApi.cajaEstado(),
-        backofficeApi.cajaCierrePreview().catch(() => null),
-        backofficeApi.cajaHistorial({ page, pageSize: PAGINATION.LIST_DEFAULT }).catch(() => ({ items: [], totalPages: 1, page: 1 })),
-      ]);
-      setEstado(e || null);
+      const estadoCaja = await backofficeApi.cajaEstado();
+      const cajaAbierta = estadoCaja?.abierta || estadoCaja?.estado === "Abierto";
+      let prev = null;
+      if (cajaAbierta) {
+        try {
+          prev = await backofficeApi.cajaCierrePreview();
+        } catch {
+          prev = null;
+        }
+      }
+      const hist = await backofficeApi
+        .cajaHistorial({ page, pageSize: PAGINATION.LIST_DEFAULT })
+        .catch(() => ({ items: [], totalPages: 1, page: 1 }));
+      setEstado(estadoCaja || null);
       setPreview(prev || null);
       const rawItems = hist?.items ?? hist?.Items;
       setHistorial(Array.isArray(rawItems) ? rawItems : Array.isArray(hist) ? hist : []);
       setHistorialPage(hist?.page ?? hist?.Page ?? page);
       setHistorialTotalPages(hist?.totalPages ?? hist?.TotalPages ?? 1);
-      
-      const abierta = e?.abierta || e?.estado === "Abierto";
-      if (abierta && showApertura) setShowApertura(false);
+
+      if (cajaAbierta && showApertura) setShowApertura(false);
     } catch (e) {
       setError(e.message || "Error al cargar datos de caja.");
     }

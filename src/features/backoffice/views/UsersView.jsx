@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Pencil, Plus, Trash2 } from "lucide-react";
 import { PAGINATION } from "../constants/pagination.js";
 import { backofficeApi } from "../services/backofficeApi.js";
-import { BackofficeDialog, BackofficeListSkeletonLoading } from "../components/index.js";
+import { BackofficeDialog, BackofficeListSkeletonLoading, BackofficePageShell } from "../components/index.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
 
@@ -125,9 +125,9 @@ export function UsersView() {
     }
   };
 
-  if (loading) return <BackofficeListSkeletonLoading rows={6} />;
+  if (loading) return <BackofficeListSkeletonLoading rows={6} maxWidth="7xl" />;
   return (
-    <>
+    <BackofficePageShell maxWidth="7xl" className="space-y-4">
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
@@ -241,6 +241,6 @@ export function UsersView() {
         variant="danger"
         loading={saving}
       />
-    </>
+    </BackofficePageShell>
   );
 }

@@ -38,9 +38,17 @@ export function ListSkeleton({ rows = 6 }) {
  * Contenedor del área principal del backoffice.
  * `maxWidth`: alinear con la vista real (fluid = todo el ancho del panel; 7xl = dashboard; 3xl = caja).
  */
+const PAGE_MAX_WIDTH = {
+  full: "max-w-full",
+  "3xl": "mx-auto max-w-3xl",
+  "4xl": "mx-auto max-w-4xl",
+  "5xl": "mx-auto max-w-5xl",
+  "6xl": "mx-auto max-w-6xl",
+  "7xl": "mx-auto max-w-7xl",
+};
+
 export function BackofficePageShell({ children, className, maxWidth = "full" }) {
-  const widthCl =
-    maxWidth === "7xl" ? "mx-auto max-w-7xl" : maxWidth === "3xl" ? "mx-auto max-w-3xl" : "max-w-full";
+  const widthCl = PAGE_MAX_WIDTH[maxWidth] ?? PAGE_MAX_WIDTH.full;
   return <div className={cn("w-full min-w-0", widthCl, className)}>{children}</div>;
 }
 

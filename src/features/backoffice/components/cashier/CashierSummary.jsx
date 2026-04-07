@@ -2,7 +2,7 @@ import React from "react";
 import { formatCurrency } from "../../utils/currency.js";
 
 /**
- * Resumen del día de la caja abierta.
+ * Resumen del día cuando la caja está abierta (legible, estilo operativo retail).
  */
 export function CashierSummary({
   totalVentas,
@@ -11,48 +11,48 @@ export function CashierSummary({
   totalTarjeta,
   totalTransferencia,
   montoEsperadoCalculado,
-  currencySymbol
+  montoInicialActual,
+  currencySymbol,
 }) {
-  return (
-    <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm animate-in fade-in slide-in-from-bottom-3 duration-500">
-      <div className="mb-6 flex items-center justify-between">
-        <h3 className="text-sm font-black uppercase tracking-widest text-slate-400">Resumen de Operaciones</h3>
-        <div className="flex -space-x-1">
-          {[1, 2, 3].map((v) => (
-            <div key={v} className="h-2 w-2 rounded-full bg-slate-100" />
-          ))}
-        </div>
-      </div>
+  const efectivo = Number(totalEfectivo || 0);
+  const tarjeta = Number(totalTarjeta || 0);
+  const transf = Number(totalTransferencia || 0);
+  const ventas = Number(totalVentas || 0);
+  const ordenes = Number(totalOrdenes || 0);
+  const tarjetaMasTransf = tarjeta + transf;
+  const fondo = Number(montoInicialActual || 0);
 
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {[
-          { label: "Ventas Netas", value: totalVentas, color: "text-slate-900" },
-          { label: "Órdenes", value: totalOrdenes, color: "text-slate-900", isCurrency: false },
-          { label: "Efectivo", value: totalEfectivo, color: "text-emerald-600" },
-          { label: "Tarjeta + Transf.", value: totalTarjeta + totalTransferencia, color: "text-blue-600" },
-        ].map((item, i) => (
-          <div key={i} className="rounded-2xl border border-slate-50 bg-slate-50/50 p-4 transition-all hover:bg-slate-50">
-            <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">{item.label}</p>
-            <p className={`text-xl font-bold tracking-tight ${item.color}`}>
-              {item.isCurrency === false ? item.value : formatCurrency(item.value, currencySymbol)}
+  const cells = [
+    { label: "Ventas (neto)", value: ventas, currency: true },
+    { label: "Tickets", value: ordenes, currency: false },
+    { label: "Efectivo", value: efectivo, currency: true },
+    { label: "Tarjeta + transf.", value: tarjetaMasTransf, currency: true },
+  ];
+
+  return (
+    <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h3 className="text-sm font-semibold text-slate-800">Resumen del día</h3>
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+        {cells.map((cell) => (
+          <div key={cell.label} className="rounded-xl border border-slate-100 bg-slate-50/80 p-3">
+            <p className="text-xs font-medium text-slate-500">{cell.label}</p>
+            <p className="mt-0.5 text-lg font-semibold tabular-nums text-slate-900">
+              {cell.currency ? formatCurrency(cell.value, currencySymbol) : cell.value}
             </p>
           </div>
         ))}
       </div>
 
-      <div className="mt-6 flex flex-col items-center justify-between gap-4 rounded-2xl bg-slate-900 p-6 text-white shadow-xl shadow-slate-200 sm:flex-row">
-        <div>
-          <p className="text-xs font-black uppercase tracking-widest text-slate-500">Monto Esperado en Caja (Efectivo)</p>
-          <p className="text-4xl font-black tracking-tighter text-white">
-            {formatCurrency(montoEsperadoCalculado, currencySymbol)}
+      <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+        <p className="text-xs font-medium text-amber-900">Monto esperado en caja (efectivo)</p>
+        <p className="mt-1 text-2xl font-bold tabular-nums tracking-tight text-amber-950">
+          {formatCurrency(montoEsperadoCalculado, currencySymbol)}
+        </p>
+        {fondo > 0 ? (
+          <p className="mt-1 text-xs text-amber-800/90">
+            Incluye fondo inicial {formatCurrency(fondo, currencySymbol)}
           </p>
-        </div>
-        <div className="hidden h-12 w-px bg-slate-800 sm:block" />
-        <div className="text-center sm:text-right">
-          <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Base Inicial</p>
-          {/* Nota: En el diseño simplificado no pasamos el montoInicialActual, pero se puede inferir o pasar si es necesario */}
-          <p className="text-sm font-bold text-slate-400">Calculado automátiamente</p>
-        </div>
+        ) : null}
       </div>
     </article>
   );

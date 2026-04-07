@@ -1,4 +1,5 @@
 import React from "react";
+import { History } from "lucide-react";
 import { formatCurrency } from "../../utils/currency.js";
 import {
   cierreDetalleDiferencia,
@@ -26,81 +27,84 @@ export function CashierHistory({
 }) {
   return (
     <>
-      <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm animate-in fade-in slide-in-from-bottom-5 duration-700">
+      <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600">
-              <span className="font-bold">H</span>
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary-100 text-primary-700">
+              <History className="h-5 w-5" aria-hidden />
             </div>
             <div>
-              <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Historial de Cierres</h3>
-              <p className="text-xs font-medium text-slate-400">Consulta los arqueos de turnos pasados.</p>
+              <h3 className="text-sm font-semibold text-slate-900">Historial de cierres</h3>
+              <p className="text-xs text-slate-500">Arqueos y turnos anteriores.</p>
             </div>
           </div>
           <button
+            type="button"
             onClick={() => setShowHistorial(!showHistorial)}
-            className="rounded-xl border border-slate-200 px-5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-all"
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
-            {showHistorial ? "Ocultar" : "Vistas Históricas"}
+            {showHistorial ? "Ocultar" : "Mostrar historial"}
           </button>
         </div>
 
         {showHistorial && (
-          <div className="mt-8 space-y-6">
-            {/* Paginación */}
-            <div className="flex items-center justify-between rounded-2xl bg-slate-50 p-2">
+          <div className="mt-6 space-y-4">
+            <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-2 py-1.5">
               <button
+                type="button"
                 onClick={() => loadAll(Math.max(1, historialPage - 1))}
                 disabled={historialPage <= 1 || processing}
-                className="h-9 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm disabled:opacity-50 hover:bg-slate-50"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50"
               >
-                ← Anterior
+                Anterior
               </button>
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Turno {historialPage} de {historialTotalPages}
+              <span className="text-sm text-slate-600">
+                Página {historialPage} de {historialTotalPages}
               </span>
               <button
+                type="button"
                 onClick={() => loadAll(Math.min(historialTotalPages, historialPage + 1))}
                 disabled={historialPage >= historialTotalPages || processing}
-                className="h-9 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-700 shadow-sm disabled:opacity-50 hover:bg-slate-50"
+                className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-slate-700 disabled:opacity-50 hover:bg-slate-50"
               >
-                Siguiente →
+                Siguiente
               </button>
             </div>
 
-            {/* Listado */}
             {historial.length === 0 ? (
-              <p className="py-8 text-center text-xs font-black uppercase tracking-widest text-slate-300">Sin cierres registrados aún.</p>
+              <p className="py-6 text-center text-sm text-slate-500">No hay cierres registrados.</p>
             ) : (
-              <div className="divide-y divide-slate-100">
+              <ul className="divide-y divide-slate-100 rounded-xl border border-slate-100">
                 {historial.map((item, i) => {
                   const cid = cierreId(item) ?? i + 1;
                   return (
-                    <div key={cid} className="flex items-center justify-between py-4 transition-all hover:px-2 hover:bg-slate-50/50 rounded-xl">
-                      <div className="flex items-center gap-4">
-                        <div className="h-10 w-px bg-slate-100" />
-                        <div>
-                          <p className="text-sm font-black text-slate-900 tracking-tight">Cierre de Caja #{cid}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">{String(cierreFechaRaw(item)).slice(0, 16).replace('T', ' ')}</p>
-                        </div>
+                    <li
+                      key={cid}
+                      className="flex flex-wrap items-center justify-between gap-3 px-3 py-3 hover:bg-slate-50/80 sm:px-4"
+                    >
+                      <div>
+                        <p className="text-sm font-medium text-slate-900">Cierre #{cid}</p>
+                        <p className="text-xs text-slate-500">
+                          {String(cierreFechaRaw(item)).slice(0, 16).replace("T", " ")}
+                        </p>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <span className="text-lg font-black text-slate-900 tracking-tighter">
+                      <div className="flex items-center gap-3">
+                        <span className="text-sm font-semibold tabular-nums text-slate-900">
                           {formatCurrency(cierreHistorialMontoPrincipal(item), currencySymbol)}
                         </span>
                         <button
                           type="button"
                           onClick={() => loadDetalleCierre(cierreId(item))}
                           disabled={cierreId(item) == null || processing}
-                          className="rounded-xl bg-slate-900 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-white shadow-lg shadow-slate-200 hover:bg-black disabled:opacity-50 transition-all active:scale-[0.98]"
+                          className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50"
                         >
-                          Ver Detalle
+                          Detalle
                         </button>
                       </div>
-                    </div>
+                    </li>
                   );
                 })}
-              </div>
+              </ul>
             )}
           </div>
         )}
@@ -108,17 +112,17 @@ export function CashierHistory({
 
       {/* Detalle Modal (Incrustado) */}
       {cierreDetalle && (
-        <article className="rounded-3xl border border-slate-200 bg-white p-6 shadow-xl animate-in fade-in zoom-in duration-500 ring-4 ring-slate-50 ring-offset-4">
-          <h2 className="mb-6 text-base font-black uppercase tracking-widest text-slate-900">Análisis del Cierre</h2>
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h2 className="mb-4 text-sm font-semibold text-slate-900">Detalle del cierre</h2>
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
             {[
-              { label: "Monto Esperado", value: cierreDetalleMontoEsperado(cierreDetalle), color: "text-slate-900", bg: "bg-slate-50" },
-              { label: "Monto Real", value: cierreDetalleMontoReal(cierreDetalle), color: "text-blue-600", bg: "bg-blue-50/30" },
-              { label: "Diferencia", value: cierreDetalleDiferencia(cierreDetalle), color: "text-red-600", bg: "bg-red-50/30" },
+              { label: "Monto esperado", value: cierreDetalleMontoEsperado(cierreDetalle), color: "text-slate-900", bg: "bg-slate-50", border: "border-slate-200" },
+              { label: "Monto real", value: cierreDetalleMontoReal(cierreDetalle), color: "text-primary-700", bg: "bg-primary-50", border: "border-primary-200" },
+              { label: "Diferencia", value: cierreDetalleDiferencia(cierreDetalle), color: "text-red-700", bg: "bg-red-50", border: "border-red-200" },
             ].map((d, i) => (
-              <div key={i} className={`rounded-2xl p-4 ${d.bg} border-l-4 ${d.color.replace('text-', 'border-')}`}>
-                <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 mb-1">{d.label}</p>
-                <p className={`text-2xl font-black tracking-tight ${d.color}`}>
+              <div key={i} className={`rounded-xl border p-4 ${d.bg} ${d.border}`}>
+                <p className="text-xs font-medium text-slate-500">{d.label}</p>
+                <p className={`mt-1 text-xl font-semibold tabular-nums ${d.color}`}>
                   {formatCurrency(d.value, currencySymbol)}
                 </p>
               </div>

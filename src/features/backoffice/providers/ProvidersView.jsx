@@ -1,5 +1,5 @@
 import { Plus } from "lucide-react";
-import { ListSkeleton } from "../components/index.js";
+import { BackofficePageShell, ListSkeleton } from "../components/index.js";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
 import { ProviderFormModal } from "./components/ProviderFormModal.jsx";
 import { ProvidersTable } from "./components/ProvidersTable.jsx";
@@ -28,7 +28,7 @@ export function ProvidersView() {
   }
 
   return (
-    <>
+    <BackofficePageShell maxWidth="7xl" className="space-y-4">
       {error && <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{error}</div>}
 
       <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -73,6 +73,6 @@ export function ProvidersView() {
         variant="danger"
         loading={saving}
       />
-    </>
+    </BackofficePageShell>
   );
 }

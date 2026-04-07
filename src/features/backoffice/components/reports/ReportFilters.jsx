@@ -37,53 +37,54 @@ export function ReportFilters({
     <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-lg font-bold text-slate-900 uppercase tracking-tight">
+          <h3 className="text-base font-semibold text-slate-900 sm:text-lg">
             {getTitle()}
           </h3>
-          <p className="text-sm text-slate-500">
-            Filtra por rango de fechas para consultar resultados.
+          <p className="mt-1 text-sm text-slate-600">
+            Ajusta el rango de fechas y actualiza los datos o exporta a Excel.
           </p>
         </div>
         <button
+          type="button"
           onClick={() => {
             setActiveReport(null);
             setRows([]);
             setSummary(null);
           }}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition-colors"
+          className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
         >
-          VOLVER AL CATÁLOGO
+          Volver al catálogo
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-6 items-end">
+      <div className="grid grid-cols-1 items-end gap-4 md:grid-cols-6">
         <div>
-          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <label className="mb-1 block text-xs font-medium text-slate-600">
             Desde
           </label>
           <input
             type="date"
             value={range.desde}
             onChange={(e) => setRange((r) => ({ ...r, desde: e.target.value }))}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
           />
         </div>
         <div>
-          <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
+          <label className="mb-1 block text-xs font-medium text-slate-600">
             Hasta
           </label>
           <input
             type="date"
             value={range.hasta}
             onChange={(e) => setRange((r) => ({ ...r, hasta: e.target.value }))}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
           />
         </div>
 
         {activeReport === "productos-top" && (
           <div>
-            <label className="mb-1 block text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Top
+            <label className="mb-1 block text-xs font-medium text-slate-600">
+              Top productos
             </label>
             <input
               type="number"
@@ -91,24 +92,26 @@ export function ReportFilters({
               max="100"
               value={range.top}
               onChange={(e) => setRange((r) => ({ ...r, top: Number(e.target.value || 10) }))}
-              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
             />
           </div>
         )}
 
-        <div className="md:col-span-2 flex gap-2">
+        <div className="flex gap-2 md:col-span-2">
           <button
+            type="button"
             onClick={() => loadReportData(activeReport)}
-            className="flex-1 rounded-xl bg-slate-900 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-slate-200 hover:bg-black transition-all active:scale-[0.98]"
+            className="flex-1 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-700"
           >
-            FILTRAR
+            Aplicar filtros
           </button>
           <button
+            type="button"
             onClick={() => downloadExcel(activeReport)}
             disabled={exporting}
-            className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-emerald-100 hover:bg-emerald-700 disabled:opacity-60 transition-all active:scale-[0.98]"
+            className="flex-1 rounded-lg bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-emerald-700 disabled:opacity-60"
           >
-            {exporting ? "EXPORTANDO..." : "EXPORTAR EXCEL"}
+            {exporting ? "Exportando…" : "Exportar Excel"}
           </button>
         </div>
       </div>

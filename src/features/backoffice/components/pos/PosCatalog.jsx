@@ -5,13 +5,36 @@ import { formatCurrency } from "../../utils/currency.js";
 /**
  * Catálogo de productos para el POS.
  */
+function CatalogSkeleton() {
+  return (
+    <div className="grid grid-cols-2 gap-4 pb-24 sm:grid-cols-3 lg:grid-cols-4 lg:pb-8 xl:grid-cols-5 2xl:grid-cols-6">
+      {Array.from({ length: 10 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex flex-col rounded-2xl border border-slate-100 bg-white p-3 shadow-sm"
+          aria-hidden
+        >
+          <div className="mb-3 aspect-square w-full animate-pulse rounded-xl bg-slate-200" />
+          <div className="h-3 w-3/4 animate-pulse rounded bg-slate-200" />
+          <div className="mt-2 h-4 w-1/2 animate-pulse rounded bg-slate-100" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function PosCatalog({
   products,
+  catalogLoading = false,
   currencySymbol,
   addToCart,
   cajaAbierta,
   actionBusy,
 }) {
+  if (catalogLoading) {
+    return <CatalogSkeleton />;
+  }
+
   if (products.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -58,7 +81,12 @@ export function PosCatalog({
                 <p className="text-sm font-black text-blue-600 tracking-tighter">
                   {formatCurrency(p.precioVenta ?? p.precio ?? 0, currencySymbol)}
                 </p>
-                <div className="flex items-center gap-1.5 pt-0.5">
+                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                    {Array.isArray(p.variantes) && p.variantes.length > 1 && (
+                      <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-amber-800">
+                        Varias tallas
+                      </span>
+                    )}
                     <span 
                         className={`text-[8px] font-black uppercase tracking-widest ${
                             p.stock <= 5 ? "text-red-600 animate-pulse" : "text-slate-400"

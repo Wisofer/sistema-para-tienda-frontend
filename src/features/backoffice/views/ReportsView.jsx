@@ -1,5 +1,4 @@
 import React from "react";
-import { BackofficeStatCardsListSkeleton } from "../components/index.js";
 
 // Hook personalizado
 import { useReports } from "../hooks/useReports.js";
@@ -9,6 +8,8 @@ import { ReportCatalog } from "../components/reports/ReportCatalog.jsx";
 import { ReportFilters } from "../components/reports/ReportFilters.jsx";
 import { ReportTables } from "../components/reports/ReportTables.jsx";
 import { OrderDetailModal } from "../components/reports/OrderDetailModal.jsx";
+import { CategoriaProductosModal } from "../components/reports/CategoriaProductosModal.jsx";
+import { BackofficePageShell } from "../components/index.js";
 
 /**
  * Vista principal de Reportes (Refactorizada).
@@ -35,14 +36,16 @@ export function ReportsView({ currencySymbol = "C$" }) {
     setDetailOpen,
     detailLoading,
     detailOrder,
-    openOrderDetail
+    openOrderDetail,
+    categoriaDetailOpen,
+    setCategoriaDetailOpen,
+    categoriaDetailRow,
+    setCategoriaDetailRow,
+    openCategoriaDetail,
   } = useReports(currencySymbol);
 
-  // Pantalla de carga inicial del reporte seleccionado
-  const showSkeleton = loading && rows.length === 0 && orders.length === 0;
-
   return (
-    <div className="mx-auto min-w-0 max-w-full space-y-4">
+    <BackofficePageShell maxWidth="7xl" className="space-y-5">
       {/* Mensaje de Error */}
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -71,21 +74,17 @@ export function ReportsView({ currencySymbol = "C$" }) {
             setSummary={() => {}}
           />
 
-          {/* Visualización de Datos */}
-          {showSkeleton ? (
-            <div className="pt-4">
-                <BackofficeStatCardsListSkeleton listRows={5} />
-            </div>
-          ) : (
-            <ReportTables
-              activeReport={activeReport}
-              rows={rows}
-              summary={summary}
-              orders={orders}
-              currencySymbol={currencySymbol}
-              openOrderDetail={openOrderDetail}
-            />
-          )}
+          {/* Visualización de Datos (carga inline en tablas, sin pantalla solo-skeleton) */}
+          <ReportTables
+            activeReport={activeReport}
+            rows={rows}
+            summary={summary}
+            orders={orders}
+            currencySymbol={currencySymbol}
+            openOrderDetail={openOrderDetail}
+            openCategoriaDetail={openCategoriaDetail}
+            loading={loading}
+          />
         </>
       )}
 
@@ -99,6 +98,16 @@ export function ReportsView({ currencySymbol = "C$" }) {
         order={detailOrder}
         currencySymbol={currencySymbol}
       />
-    </div>
+
+      <CategoriaProductosModal
+        open={categoriaDetailOpen}
+        onClose={() => {
+          setCategoriaDetailOpen(false);
+          setCategoriaDetailRow(null);
+        }}
+        categoriaRow={categoriaDetailRow}
+        currencySymbol={currencySymbol}
+      />
+    </BackofficePageShell>
   );
 }

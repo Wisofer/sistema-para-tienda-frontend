@@ -7,6 +7,9 @@ import {
   fileToBase64 
 } from "../../utils/inventoryUtils.js";
 import { Upload, X } from "lucide-react";
+import { useOnlineStatus } from "../../../../hooks/useOnlineStatus.js";
+import { useSnackbar } from "../../../../contexts/SnackbarContext.jsx";
+import { NETWORK_UI, offlineButtonTitle } from "../../../../constants/networkUi.js";
 
 /**
  * Modal para la creación y edición de productos.
@@ -21,7 +24,19 @@ export function ProductFormModal({
   categories,
   providers,
 }) {
+  const isOnline = useOnlineStatus();
+  const snackbar = useSnackbar();
+
   if (!modalOpen) return null;
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (!isOnline) {
+      snackbar.error(NETWORK_UI.snackbarGuardar);
+      return;
+    }
+    saveProduct(e);
+  };
 
   return (
     <BackofficeDialog
@@ -29,7 +44,7 @@ export function ProductFormModal({
       panelClassName="sm:mx-auto"
       onBackdropClick={saving ? undefined : () => setModalOpen(false)}
     >
-      <form onSubmit={saveProduct} className="flex w-full min-w-0 flex-col">
+      <form onSubmit={handleSubmit} className="flex w-full min-w-0 flex-col">
         {/* Título dinámico */}
         <h3 className="text-base font-semibold leading-tight text-slate-800 sm:text-lg">
           {form.id ? "Editar producto" : "Nuevo producto"}
@@ -123,7 +138,36 @@ export function ProductFormModal({
             </select>
           </label>
 
-          {/* Stocks (Dinámico) */}
+          {/* Checkboxes de control (Controlar stock primero: define si se muestran cantidades / talla para variante) */}
+          <div className="col-span-full grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:col-span-2">
+            <div className="space-y-1">
+              <label className="flex min-h-[44px] items-center gap-3 text-sm font-medium text-slate-700 sm:min-h-0">
+                <input
+                  type="checkbox"
+                  className="h-5 w-5 shrink-0 rounded border-slate-300 sm:h-4 sm:w-4"
+                  checked={form.controlarStock}
+                  onChange={(e) => setForm((f) => ({ ...f, controlarStock: e.target.checked }))}
+                />
+                Controlar stock
+              </label>
+              {!form.controlarStock && (
+                <p className="text-[11px] leading-snug text-slate-500">
+                  Sin inventario: la venta no descuenta existencias (ej. pieza única o servicio).
+                </p>
+              )}
+            </div>
+            <label className="flex min-h-[44px] items-center gap-3 text-sm text-slate-700 sm:min-h-0">
+              <input
+                type="checkbox"
+                className="h-5 w-5 shrink-0 rounded border-slate-300 sm:h-4 sm:w-4"
+                checked={form.activo}
+                onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))}
+              />
+              Activo
+            </label>
+          </div>
+
+          {/* Stocks y talla (solo con control de inventario; talla opcional para variante inicial en servidor) */}
           {form.controlarStock && (
             <>
               <label className="min-w-0 text-xs font-semibold text-slate-600">
@@ -150,21 +194,21 @@ export function ProductFormModal({
                   className={productModalFieldClass}
                 />
               </label>
+              <label className="min-w-0 text-xs font-semibold text-slate-600 sm:col-span-2">
+                Talla (opcional)
+                <input
+                  value={form.talla}
+                  onChange={(e) => setForm((f) => ({ ...f, talla: e.target.value }))}
+                  placeholder="Ej: L, 42, M — ayuda a crear la variante inicial"
+                  className={productModalFieldClass}
+                  autoComplete="off"
+                />
+              </label>
             </>
           )}
 
-          {/* Talla y Descripción */}
-          <div className="col-span-full grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-6">
-            <label className="min-w-0 text-xs font-bold text-slate-600 uppercase tracking-widest">
-              Talla
-              <input
-                value={form.talla}
-                onChange={(e) => setForm((f) => ({ ...f, talla: e.target.value }))}
-                placeholder="Ej: L, 42, M"
-                className={productModalFieldClass}
-                autoComplete="off"
-              />
-            </label>
+          {/* Descripción */}
+          <div className="col-span-full">
             <label className="min-w-0 text-xs font-bold text-slate-600 uppercase tracking-widest">
               Descripción
               <textarea
@@ -174,29 +218,6 @@ export function ProductFormModal({
                 className={productModalTextareaClass}
                 rows="1"
               />
-            </label>
-          </div>
-
-
-          {/* Checkboxes de control */}
-          <div className="col-span-full grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:col-span-2">
-            <label className="flex min-h-[44px] items-center gap-3 text-sm text-slate-700 sm:min-h-0">
-              <input
-                type="checkbox"
-                className="h-5 w-5 shrink-0 rounded border-slate-300 sm:h-4 sm:w-4"
-                checked={form.controlarStock}
-                onChange={(e) => setForm((f) => ({ ...f, controlarStock: e.target.checked }))}
-              />
-              Controlar stock
-            </label>
-            <label className="flex min-h-[44px] items-center gap-3 text-sm text-slate-700 sm:min-h-0">
-              <input
-                type="checkbox"
-                className="h-5 w-5 shrink-0 rounded border-slate-300 sm:h-4 sm:w-4"
-                checked={form.activo}
-                onChange={(e) => setForm((f) => ({ ...f, activo: e.target.checked }))}
-              />
-              Activo
             </label>
           </div>
 
@@ -249,7 +270,8 @@ export function ProductFormModal({
           </button>
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || !isOnline}
+            title={offlineButtonTitle(isOnline)}
             className="inline-flex min-h-[44px] items-center justify-center rounded-xl bg-primary-600 px-8 text-sm font-bold text-white shadow-lg shadow-primary-200 hover:bg-primary-700 disabled:opacity-50 sm:min-h-0 sm:py-2"
           >
             {saving ? "Guardando..." : "Guardar Producto"}

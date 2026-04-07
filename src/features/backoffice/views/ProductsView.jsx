@@ -1,5 +1,5 @@
 import React from "react";
-import { BackofficeStatCardsListSkeleton } from "../components/index.js";
+import { BackofficePageShell, BackofficeStatCardsListSkeleton } from "../components/index.js";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
 import { CategoriesView } from "./CategoriesView.jsx";
 
@@ -83,7 +83,7 @@ export function ProductsView({ currencySymbol = "C$" }) {
 
   // Pantalla de carga
   if (loading) {
-    return <BackofficeStatCardsListSkeleton listRows={8} />;
+    return <BackofficeStatCardsListSkeleton listRows={8} maxWidth="7xl" />;
   }
 
   // Vista de gestión de categorías (sub-vista)
@@ -103,7 +103,7 @@ export function ProductsView({ currencySymbol = "C$" }) {
   }
 
   return (
-    <div className="min-w-0 space-y-4">
+    <BackofficePageShell maxWidth="7xl" className="space-y-4">
       {/* Mensaje de Error */}
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -199,6 +199,6 @@ export function ProductsView({ currencySymbol = "C$" }) {
           onClose={() => setConfirmAction({ open: false, type: "", id: null, name: "" })}
         />
       )}
-    </div>
+    </BackofficePageShell>
   );
 }

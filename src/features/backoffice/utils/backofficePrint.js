@@ -117,5 +117,29 @@ export async function openBackendPrintHtml(html) {
   }
 }
 
-// Nota: antes existía `openAuthenticatedBackendBlobInNewTab`, pero ya no se usa
-// (los flujos de impresión usan iframe oculto con `printBlobInHiddenFrame`).
+/**
+ * Ticket tras cobro en POS: prioriza HTML devuelto por el pago; si no hay, descarga PDF por venta.
+ * Todo en iframe oculto (sin pestañas ni overlays).
+ *
+ * @param {object} opts
+ * @param {string|undefined} opts.html
+ * @param {number|string|undefined} opts.ventaId
+ * @param {(id: number) => Promise<Blob>} opts.fetchTicketPdf
+ */
+export async function printPosTicketAfterPayment({ html, ventaId, fetchTicketPdf }) {
+  const htmlStr = html != null && String(html).trim() !== "" ? String(html) : "";
+  if (htmlStr) {
+    return openBackendPrintHtml(htmlStr);
+  }
+
+  const id = ventaId != null && ventaId !== "" ? Number(ventaId) : NaN;
+  if (!Number.isFinite(id) || id <= 0 || typeof fetchTicketPdf !== "function") {
+    return false;
+  }
+
+  const blob = await fetchTicketPdf(id);
+  if (!(blob instanceof Blob)) {
+    return false;
+  }
+  return printBlobInHiddenFrame(blob, { shouldPrint: true });
+}

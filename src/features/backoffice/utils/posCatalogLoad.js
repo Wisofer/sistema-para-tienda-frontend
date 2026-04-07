@@ -10,6 +10,7 @@ export async function fetchPosProductosYCategorias(api, pageSize) {
       pageSize,
       activos: true,
       incluirOpciones: true,
+      incluirVariantes: true,
     }),
     api.catalogoCategoriasProducto(),
   ]);

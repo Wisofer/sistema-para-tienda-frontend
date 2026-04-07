@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { MessageSquareText, Pencil, Settings2, Trash2 } from "lucide-react";
 import { backofficeApi } from "../services/backofficeApi.js";
-import { BackofficeDialog, BackofficeListSkeletonLoading } from "../components/index.js";
+import { BackofficeDialog, BackofficeListSkeletonLoading, BackofficePageShell } from "../components/index.js";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
@@ -188,17 +188,12 @@ export function SettingsView() {
     }
   };
 
-  if (loading) return <BackofficeListSkeletonLoading rows={5} />;
-  const normalizedSettings = settings.filter((s) => String(s?.clave || "").toLowerCase() !== "tipocambiodolar");
+  if (loading) return <BackofficeListSkeletonLoading rows={5} maxWidth="5xl" />;
   return (
-    <div className="mx-auto min-w-0 max-w-4xl px-2 pb-10 sm:px-4">
-      {/* Header Minimalista */}
-      <header className="mb-8 mt-4 sm:mb-12">
-        <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Ajustes</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          Personaliza el comportamiento de tu sistema y gestiona parámetros globales.
-        </p>
-      </header>
+    <BackofficePageShell maxWidth="5xl" className="pb-8">
+      <p className="mb-6 text-sm text-slate-600">
+        Moneda, tipo de cambio, avisos de stock y plantillas de WhatsApp.
+      </p>
 
       {error && (
         <div className="mb-6 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600 animate-in fade-in slide-in-from-top-2">
@@ -220,7 +215,7 @@ export function SettingsView() {
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-800">{user?.nombreUsuario || user?.usuario || "Usuario"}</h3>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{user?.rol || "Admin"}</p>
+                  <p className="text-xs text-slate-500">{user?.rol || "Admin"}</p>
                 </div>
               </div>
             </article>
@@ -328,7 +323,7 @@ export function SettingsView() {
                             </span>
                           )}
                         </h4>
-                        <button onClick={() => setConfirmDeleteTemplate({ open: false, id: t.id })} className="text-slate-300 hover:text-red-500">
+                        <button onClick={() => setConfirmDeleteTemplate({ open: true, id: t.id })} className="text-slate-300 hover:text-red-500">
                           <Trash2 className="h-4.5 w-4.5" />
                         </button>
                       </div>
@@ -428,6 +423,6 @@ export function SettingsView() {
         variant="danger"
         loading={saving}
       />
-    </div>
+    </BackofficePageShell>
   );
 }

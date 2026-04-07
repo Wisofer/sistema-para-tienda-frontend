@@ -19,7 +19,7 @@ export function OrderDetailModal({
       <article className="max-h-[85vh] w-full max-w-3xl overflow-auto rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
         <div className="mb-4 flex items-center justify-between border-b border-slate-100 pb-3">
           <h4 className="text-lg font-bold text-slate-800 uppercase tracking-tight">
-            Detalle de orden
+            Detalle de venta
           </h4>
           <button
             type="button"
@@ -60,10 +60,31 @@ export function OrderDetailModal({
               </div>
             </div>
 
+            {order.kind === "ticket" && (
+              <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-100 bg-white p-3 text-xs sm:grid-cols-4">
+                <div>
+                  <p className="font-black text-slate-400 uppercase tracking-widest">Productos</p>
+                  <p className="font-bold text-slate-900">{order.cantidadLineas ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="font-black text-slate-400 uppercase tracking-widest">Unidades</p>
+                  <p className="font-bold text-slate-900">{order.cantidadUnidades ?? "—"}</p>
+                </div>
+                <div>
+                  <p className="font-black text-slate-400 uppercase tracking-widest">Subtotal</p>
+                  <p className="font-bold text-slate-900">{formatCurrency(order.subtotalLineas ?? 0, currencySymbol)}</p>
+                </div>
+                <div>
+                  <p className="font-black text-slate-400 uppercase tracking-widest">Total cobrado</p>
+                  <p className="font-bold text-emerald-700">{formatCurrency(order.totalCobrado ?? order.total ?? 0, currencySymbol)}</p>
+                </div>
+              </div>
+            )}
+
             {/* Tabla de Items */}
             <div className="overflow-x-auto rounded-xl border border-slate-100">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-900 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <thead className="border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-600">
                   <tr>
                     <th className="px-4 py-3 text-left">Producto</th>
                     <th className="px-4 py-3 text-center">Cantidad</th>
@@ -82,7 +103,9 @@ export function OrderDetailModal({
                     (order.items || order.Items || []).map((it, i) => (
                       <tr key={`${it.id || i}`} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-4 py-3 font-bold text-slate-800 uppercase tracking-tight">
-                          {it.servicio || it.producto || "-"}
+                          {[it.producto || it.servicio || "-", it.variante ? `(${it.variante})` : ""]
+                            .filter(Boolean)
+                            .join(" ")}
                         </td>
                         <td className="px-4 py-3 text-center font-black text-slate-600">
                           {it.cantidad || 0}
@@ -103,9 +126,14 @@ export function OrderDetailModal({
             {/* Total */}
             <div className="flex justify-end p-2">
               <div className="text-right">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de la Orden</p>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  {order.kind === "ticket" ? "Total cobrado" : "Total de la Orden"}
+                </p>
                 <p className="text-2xl font-black text-blue-600">
-                  {formatCurrency(order.total || order.monto || 0, currencySymbol)}
+                  {formatCurrency(
+                    order.kind === "ticket" ? order.totalCobrado ?? order.total ?? 0 : order.total || order.monto || 0,
+                    currencySymbol
+                  )}
                 </p>
               </div>
             </div>
@@ -113,10 +141,11 @@ export function OrderDetailModal({
         )}
         
         <button
+          type="button"
           onClick={onClose}
-          className="mt-4 w-full rounded-xl bg-slate-900 py-3 text-sm font-bold text-white shadow-xl hover:bg-black transition-all active:scale-[0.98]"
+          className="mt-4 w-full rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50"
         >
-          CERRAR DETALLE
+          Cerrar detalle
         </button>
       </article>
     </div>

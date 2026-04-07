@@ -1,9 +1,5 @@
 import React from "react";
-import { 
-  PosProductOpcionesModal,
-  PosProcesarVentaModal,
-  PosReceiptModal,
-} from "../components/index.js";
+import { PosProductOpcionesModal, PosProcesarVentaModal, PosVariantModal } from "../components/index.js";
 
 // Hook personalizado
 import { usePOS } from "../hooks/usePOS.js";
@@ -37,6 +33,7 @@ export function PosView({ currencySymbol = "C$" }) {
     subtotal,
     cajaAbierta,
     actionBusy,
+    isOnline,
     mobileTab,
     setMobileTab,
     handleCheckout,
@@ -46,22 +43,13 @@ export function PosView({ currencySymbol = "C$" }) {
     saleBackendTotal,
     saleProcessing,
     onPaymentComplete,
-    receiptModalOpen,
-    setReceiptModalOpen,
-    receiptData,
     exchangeRate,
     opcionesModal,
     setOpcionesModal,
+    variantModal,
+    setVariantModal,
+    addVariantToCart,
   } = usePOS(currencySymbol);
-
-  // Pantalla de carga inicial
-  if (loading) {
-    return (
-      <div className="flex h-64 items-center justify-center text-slate-500 font-bold uppercase tracking-widest">
-        Cargando catálogo...
-      </div>
-    );
-  }
 
   return (
     <div className="flex h-[calc(100vh-8rem)] flex-col gap-4 overflow-hidden lg:flex-row">
@@ -83,6 +71,7 @@ export function PosView({ currencySymbol = "C$" }) {
         <div className="flex-1 content-start gap-4 overflow-y-auto p-4 scrollbar-hide">
           <PosCatalog
             products={filteredProducts}
+            catalogLoading={loading}
             currencySymbol={currencySymbol}
             addToCart={addToCart}
             cajaAbierta={cajaAbierta}
@@ -104,6 +93,7 @@ export function PosView({ currencySymbol = "C$" }) {
           subtotal={subtotal}
           currencySymbol={currencySymbol}
           actionBusy={actionBusy}
+          isOnline={isOnline}
         />
       </section>
 
@@ -115,6 +105,16 @@ export function PosView({ currencySymbol = "C$" }) {
       />
 
       {/* --- MODALES --- */}
+
+      {variantModal.open && (
+        <PosVariantModal
+          open={variantModal.open}
+          product={variantModal.product}
+          currencySymbol={currencySymbol}
+          onClose={() => setVariantModal({ open: false, product: null })}
+          onSelectVariant={(variant) => addVariantToCart(variantModal.product, variant)}
+        />
+      )}
 
       {/* Modal de Opciones de Producto (Tallas/Extras) */}
       {opcionesModal.open && (
@@ -141,16 +141,6 @@ export function PosView({ currencySymbol = "C$" }) {
           busy={saleProcessing}
           onClose={() => setSaleModalOpen(false)}
           onGuardar={onPaymentComplete}
-          currencySymbol={currencySymbol}
-        />
-      )}
-
-      {/* Modal de Recibo Visual */}
-      {receiptModalOpen && (
-        <PosReceiptModal
-          open={receiptModalOpen}
-          onClose={() => setReceiptModalOpen(false)}
-          saleData={receiptData}
           currencySymbol={currencySymbol}
         />
       )}

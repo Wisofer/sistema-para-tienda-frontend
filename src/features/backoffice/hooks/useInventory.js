@@ -1,12 +1,13 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { backofficeApi } from "../services/backofficeApi.js";
 import { PAGINATION } from "../constants/pagination.js";
+import { POS_INVENTORY_UPDATED_EVENT } from "../constants/posEvents.js";
 import { resolveProductCodigoForSave } from "../utils/productCodigo.js";
 import { parseOpcionesEspecialesFromGruposApi } from "../utils/productoOpcionesEspecialesSync.js";
 import { downloadCSV } from "../utils/exportUtils.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { PROVIDERS_UPDATED_EVENT } from "../providers/constants.js";
-import { tieneControlStock } from "../utils/inventoryUtils.js";
+import { tieneControlStock, normalizeMovementRow } from "../utils/inventoryUtils.js";
 
 /** 
  * Hook personalizado para manejar toda la lógica del módulo de Inventario.
@@ -65,7 +66,7 @@ export function useInventory(currencySymbol = "C$") {
     proveedorId: "",
     stock: "",
     stockMinimo: "",
-    controlarStock: false,
+    controlarStock: true,
     activo: true,
     opcionesEspecialesOn: false,
     opcionesEspecialesLines: [""],
@@ -76,6 +77,7 @@ export function useInventory(currencySymbol = "C$") {
 
   const [stockForm, setStockForm] = useState({
     productoId: "",
+    productoVarianteId: "",
     cantidad: "",
     costoUnitario: "",
     proveedorId: "",
@@ -92,7 +94,6 @@ export function useInventory(currencySymbol = "C$") {
         pageSize: PAGINATION.PRODUCTOS_ADMIN,
         search: search || undefined,
         categoriaId: categoriaId || undefined,
-        activos: true,
       });
       setProducts(Array.isArray(data?.items) ? data.items : []);
     } catch (e) {
@@ -142,7 +143,16 @@ export function useInventory(currencySymbol = "C$") {
   }, [snackbar]);
 
   const filteredProducts = useMemo(() => {
-    let list = products;
+    const withCategoryName = (p) => {
+      if (p.categoriaNombre) return p;
+      const cid = p.categoriaProductoId;
+      const cat = categories.find((c) => String(c.id) === String(cid));
+      return {
+        ...p,
+        categoriaNombre: cat?.nombre || cat?.Nombre || "",
+      };
+    };
+    let list = products.map(withCategoryName);
     if (selectedCategory) {
       list = list.filter((p) => String(p.categoriaProductoId || "") === String(selectedCategory));
     }
@@ -154,7 +164,7 @@ export function useInventory(currencySymbol = "C$") {
       );
     }
     return list;
-  }, [products, selectedCategory, search]);
+  }, [products, categories, selectedCategory, search]);
 
   const onCategoryChange = async (value) => {
     setSelectedCategory(value);
@@ -172,7 +182,7 @@ export function useInventory(currencySymbol = "C$") {
       await backofficeApi.deleteProducto(id);
       await loadProducts(selectedCategory);
       snackbar.success("Producto eliminado/desactivado.");
-      window.dispatchEvent(new CustomEvent("pos-inventory-updated"));
+      window.dispatchEvent(new CustomEvent(POS_INVENTORY_UPDATED_EVENT));
     } catch (e) {
       snackbar.error(e.message || "No se pudo eliminar el producto.");
     } finally {
@@ -217,11 +227,16 @@ export function useInventory(currencySymbol = "C$") {
       descripcion: "",
       precioVenta: "",
       precioCompra: "",
-      categoriaProductoId: selectedCategory || categories[0]?.id || "",
-      proveedorId: providers[0]?.id || "",
+      categoriaProductoId:
+        selectedCategory !== "" && selectedCategory != null
+          ? String(selectedCategory)
+          : categories[0]?.id != null
+            ? String(categories[0].id)
+            : "",
+      proveedorId: providers[0]?.id != null ? String(providers[0].id) : "",
       stock: "",
       stockMinimo: "",
-      controlarStock: false,
+      controlarStock: true,
       activo: true,
       opcionesEspecialesOn: false,
       opcionesEspecialesLines: [""],
@@ -244,15 +259,18 @@ export function useInventory(currencySymbol = "C$") {
       const lineas = parsed.lineas.length ? parsed.lineas : [""];
       const tieneOpciones = lineas.some((s) => String(s || "").trim());
       
+      const catId = p.categoriaProductoId ?? p.CategoriaProductoId;
+      const provId = p.proveedorId ?? p.ProveedorId;
       setForm({
         id: p.id,
         codigo: p.codigo || "",
         nombre: p.nombre || "",
-        descripcion: p.descripcion || "",
-        precioVenta: p.precioVenta ?? p.PrecioVenta ?? p.precio ?? p.Precio ?? "",
+        descripcion: p.descripcion || p.Descripcion || "",
+        precioVenta:
+          p.precioVenta ?? p.PrecioVenta ?? p.precio ?? p.Precio ?? "",
         precioCompra: p.precioCompra ?? p.PrecioCompra ?? "",
-        categoriaProductoId: p.categoriaProductoId || "",
-        proveedorId: p.proveedorId ?? p.ProveedorId ?? "",
+        categoriaProductoId: catId != null && catId !== "" ? String(catId) : "",
+        proveedorId: provId != null && provId !== "" ? String(provId) : "",
         stock: p.stock ?? "",
         stockMinimo: p.stockMinimo ?? "",
         controlarStock: Boolean(p.controlarStock),
@@ -277,6 +295,7 @@ export function useInventory(currencySymbol = "C$") {
     setSaving(true);
     try {
       const codigo = resolveProductCodigoForSave(form.codigo, form.nombre, peerCodigos(form.id));
+      const ctrl = Boolean(form.controlarStock);
       const body = {
         codigo,
         nombre: form.nombre,
@@ -286,42 +305,26 @@ export function useInventory(currencySymbol = "C$") {
         precioCompra: Number(form.precioCompra || 0),
         categoriaProductoId: Number(form.categoriaProductoId),
         ...(form.proveedorId ? { proveedorId: Number(form.proveedorId) } : {}),
-        stockMinimo: Number(form.stockMinimo || 0),
-        controlarStock: Boolean(form.controlarStock),
+        stockMinimo: ctrl ? Number(form.stockMinimo || 0) : 0,
+        controlarStock: ctrl,
         activo: Boolean(form.activo),
         talla: form.talla,
         color: form.color,
         imagen: form.imagen,
-        ...(form.id ? {} : { stock: Number(form.stock || 0) }),
+        stock: ctrl ? Number(form.stock ?? 0) : 0,
       };
       
       if (form.id) {
         await backofficeApi.updateProducto(form.id, body);
       } else {
-        const createdResp = await backofficeApi.createProducto(body);
-        
-        // Registrar entrada de stock inicial si el stock provisto es mayor a 0 y es un producto nuevo.
-        // Soporta la respuesta de envoltorio {data: {id: ...}} o si devuelve el entero directamente
-        const createdId = typeof createdResp === "object" ? (createdResp?.id || createdResp?.data?.id || createdResp?.data?.items?.[0]?.id || createdResp?.data) : createdResp;
-        
-        if (createdId && body.controlarStock && Number(body.stock || 0) > 0) {
-          try {
-            await backofficeApi.entradaStockProducto({
-              productoId: Number(createdId),
-              cantidad: Number(body.stock),
-              costoUnitario: Number(body.precioCompra || 0),
-              observaciones: "Inventario Inicial",
-            });
-          } catch (stkErr) {
-            console.error("Fallo al registrar inventario inicial:", stkErr);
-          }
-        }
+        // El stock inicial va en el POST (FormData StockActual). Evita un segundo POST que suele 404 si la ruta de movimientos no coincide.
+        await backofficeApi.createProducto(body);
       }
       
       await loadProducts(selectedCategory);
       setModalOpen(false);
       snackbar.success(form.id ? "Producto actualizado." : "Producto creado.");
-      window.dispatchEvent(new CustomEvent("pos-inventory-updated"));
+      window.dispatchEvent(new CustomEvent(POS_INVENTORY_UPDATED_EVENT));
     } catch (e2) {
       snackbar.error(e2.message || "No se pudo guardar el producto.");
     } finally {
@@ -336,6 +339,7 @@ export function useInventory(currencySymbol = "C$") {
     setStockSuggestOpen(false);
     setStockForm({
       productoId: "",
+      productoVarianteId: "",
       cantidad: "",
       costoUnitario: "",
       proveedorId: providers[0]?.id != null ? String(providers[0].id) : "",
@@ -364,20 +368,42 @@ export function useInventory(currencySymbol = "C$") {
       return;
     }
     
+    const vars =
+      selectedStockProduct?.variantes ??
+      selectedStockProduct?.Variantes ??
+      [];
+    const variantList = Array.isArray(vars) ? vars : [];
+    if (variantList.length > 1 && !String(stockForm.productoVarianteId || "").trim()) {
+      snackbar.error("Este producto tiene varias variantes: elige talla/color.");
+      return;
+    }
+
+    const varianteOpt =
+      stockForm.productoVarianteId && String(stockForm.productoVarianteId).trim() !== ""
+        ? Number(stockForm.productoVarianteId)
+        : undefined;
+
     setSaving(true);
     try {
+      const varianteBody =
+        varianteOpt != null && Number.isFinite(varianteOpt) && varianteOpt > 0
+          ? { productoVarianteId: varianteOpt }
+          : {};
+
       if (stockMode === "entrada") {
         await backofficeApi.entradaStockProducto({
           productoId: Number(stockForm.productoId),
+          ...varianteBody,
           cantidad: Number(stockForm.cantidad),
           costoUnitario: Number(stockForm.costoUnitario || 0),
           proveedorId: stockForm.proveedorId ? Number(stockForm.proveedorId) : null,
-          numeroFactura: stockForm.numeroFactura || null,
+          numeroReferencia: stockForm.numeroFactura?.trim() || null,
           observaciones: stockForm.observaciones || null,
         });
       } else if (stockMode === "salida") {
         await backofficeApi.salidaStockProducto({
           productoId: Number(stockForm.productoId),
+          ...varianteBody,
           cantidad: Number(stockForm.cantidad),
           subtipo: stockForm.subtipo,
           observaciones: stockForm.observaciones || null,
@@ -385,7 +411,8 @@ export function useInventory(currencySymbol = "C$") {
       } else {
         await backofficeApi.ajusteStockProducto({
           productoId: Number(stockForm.productoId),
-          cantidadNueva: Number(stockForm.cantidadNueva),
+          ...varianteBody,
+          stockFisicoReal: Number(stockForm.cantidadNueva),
           observaciones: stockForm.observaciones || null,
         });
       }
@@ -393,7 +420,7 @@ export function useInventory(currencySymbol = "C$") {
       await loadProducts(selectedCategory);
       setStockModalOpen(false);
       snackbar.success("Movimiento de inventario aplicado.");
-      window.dispatchEvent(new CustomEvent("pos-inventory-updated"));
+      window.dispatchEvent(new CustomEvent(POS_INVENTORY_UPDATED_EVENT));
     } catch (e2) {
       snackbar.error(e2.message || "No se pudo aplicar el movimiento.");
     } finally {
@@ -409,7 +436,8 @@ export function useInventory(currencySymbol = "C$") {
         backofficeApi.movimientosProductos({ page: 1, pageSize: PAGINATION.MOVIMIENTOS }),
         backofficeApi.listProductos({ page: 1, pageSize: PAGINATION.CATALOG_ALERTS, activos: true }).catch(() => ({ items: [] })),
       ]);
-      setMovementRows(Array.isArray(movRes?.items) ? movRes.items : []);
+      const rawMov = movRes?.items ?? movRes?.Items ?? movRes?.movimientos ?? (Array.isArray(movRes) ? movRes : []);
+      setMovementRows(Array.isArray(rawMov) ? rawMov.map(normalizeMovementRow) : []);
       setMovementProductLookup(Array.isArray(prodRes?.items) ? prodRes.items : []);
       setMovementModalOpen(true);
     } catch (e) {
@@ -419,11 +447,24 @@ export function useInventory(currencySymbol = "C$") {
     }
   };
 
+  const exportMovimientosInventarioExcel = useCallback(async () => {
+    setSaving(true);
+    try {
+      await backofficeApi.exportarMovimientosInventarioExcel({});
+      snackbar.success("Excel descargado.");
+    } catch (e) {
+      snackbar.error(e.message || "No se pudo exportar.");
+    } finally {
+      setSaving(false);
+    }
+  }, [snackbar]);
+
   const openProductHistory = async (p) => {
     setSaving(true);
     try {
       const data = await backofficeApi.movimientosProducto(p.id, { limite: 50 });
-      setHistoryRows(Array.isArray(data?.movimientos) ? data.movimientos : []);
+      const rows = data?.movimientos ?? data?.items ?? data?.Items ?? [];
+      setHistoryRows(Array.isArray(rows) ? rows.map(normalizeMovementRow) : []);
       setSelectedProductName(p.nombre || "Producto");
       setProductHistoryModalOpen(true);
     } catch (e) {
@@ -446,7 +487,7 @@ export function useInventory(currencySymbol = "C$") {
     if (!q) return [];
     return list
       .filter((p) => {
-        const hay = `${p.nombre || ""} ${p.codigo || ""} ${p.categoria || ""}`.toLowerCase();
+        const hay = `${p.nombre || ""} ${p.codigo || ""} ${p.categoriaNombre || p.categoria || ""}`.toLowerCase();
         return hay.includes(q);
       })
       .slice(0, 10);
@@ -460,7 +501,8 @@ export function useInventory(currencySymbol = "C$") {
     stockModalOpen, setStockModalOpen, openStockModal, submitStockAction, stockForm, setStockForm, stockMode,
     stockModalProducts, stockProductQuery, setStockProductQuery, stockModalLoading, stockSuggestOpen, setStockSuggestOpen, stockSuggestBlurTimerRef,
     selectedStockProduct, stockAutocompleteList,
-    movementModalOpen, setMovementModalOpen, openGlobalMovements, movementRows, movementProductLookup,
+    movementModalOpen, setMovementModalOpen, openGlobalMovements, exportMovimientosInventarioExcel,
+    movementRows, movementProductLookup,
     productHistoryModalOpen, setProductHistoryModalOpen, openProductHistory, historyRows, selectedProductName,
     categoriesScreen, setCategoriesScreen,
     confirmAction, setConfirmAction,

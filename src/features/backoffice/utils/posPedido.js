@@ -4,15 +4,62 @@ import {
   opcionesSeleccionadasKey,
   withOpcionesSeleccionadas,
 } from "./productoOpciones.js";
+import { compactVarianteEtiquetaCarrito } from "./posVariantes.js";
+
+/**
+ * Une líneas duplicadas (mismo producto + variante + opciones) por carreras de clic o estado viejo.
+ * Evita enviar dos filas al API cuando el usuario sumó una sola unidad lógica.
+ */
+export function mergeDuplicateCartLines(cart) {
+  const list = Array.isArray(cart) ? cart : [];
+  const map = new Map();
+  for (const line of list) {
+    const pid = Number(line?.id);
+    if (!Number.isFinite(pid)) continue;
+    const vidRaw = line?.varianteId;
+    const vid =
+      vidRaw != null && vidRaw !== "" && Number.isFinite(Number(vidRaw)) && Number(vidRaw) > 0
+        ? Number(vidRaw)
+        : "";
+    const opKey = opcionesSeleccionadasKey(line?.opcionesSeleccionadas);
+    const key = `${pid}|${vid}|${opKey}`;
+    const prev = map.get(key);
+    if (prev) {
+      prev.qty = normalizePosItemCantidad(Number(prev.qty || 0) + Number(line.qty || 0));
+    } else {
+      map.set(key, { ...line, qty: normalizePosItemCantidad(line.qty) });
+    }
+  }
+  return Array.from(map.values());
+}
+
+/** Línea sin variante ni opciones: se puede fusionar por mismo producto al sumar cantidad. */
+export function posLineEsProductoSimpleSinOpciones(line) {
+  return (
+    line &&
+    line.varianteId == null &&
+    !(Array.isArray(line.opcionesSeleccionadas) && line.opcionesSeleccionadas.length > 0)
+  );
+}
+
+/** Cantidad entera ≥ 1 para el API (1 unidad vendida = −1 stock; evita NaN/0/fracciones raras). */
+export function normalizePosItemCantidad(qty) {
+  const n = Number(qty);
+  if (!Number.isFinite(n) || n < 1) return 1;
+  return Math.floor(n);
+}
 
 /** Líneas del carrito POS → cuerpo `Items` de POST /pos/ventas (Retail). */
 export function posCartToRetailItems(cart) {
   const list = Array.isArray(cart) ? cart : [];
-  return list.map((x) => ({
-    ProductoId: Number(x.id),
-    ProductoVarianteId: Number(x.varianteId) || null,
-    Cantidad: Number(x.qty),
-  }));
+  return list.map((x) => {
+    const vid = Number(x.varianteId);
+    return {
+      ProductoId: Number(x.id),
+      ProductoVarianteId: Number.isFinite(vid) && vid > 0 ? vid : null,
+      Cantidad: normalizePosItemCantidad(x.qty),
+    };
+  });
 }
 
 /** Líneas del carrito POS → cuerpo `productos` de legacy /pos/ordenes. */
@@ -91,6 +138,25 @@ export function extractPosOrdenResponseId(data, fallback = null) {
   );
 }
 
+/**
+ * Respuesta de `procesar-pago` / `gestionar-pago` → id de venta para ticket PDF.
+ * No usar `resp.id` / `resp.Id`: en muchos backends es el id del **movimiento de pago**, no de la venta,
+ * y GET /ventas/{id}/ticket acaba mostrando otro recibo (producto/monto incorrectos).
+ */
+export function extractVentaIdFromPayment(resp) {
+  if (resp == null || typeof resp !== "object") return null;
+  const v =
+    resp.ventaId ??
+    resp.VentaId ??
+    resp.venta?.id ??
+    resp.venta?.Id ??
+    resp.Venta?.Id ??
+    resp.facturaId ??
+    resp.FacturaId ??
+    null;
+  return v != null && v !== "" ? v : null;
+}
+
 export function mapBackendItemsToCart(items) {
   const list = Array.isArray(items) ? items : [];
   return list
@@ -143,16 +209,29 @@ export function mapBackendItemsToCart(items) {
       const opcionesResumen = opcionesResumenSoloTextoOpcion(it?.opcionesResumen ?? it?.OpcionesResumen ?? "");
       const notas = String(it?.notas ?? it?.Notas ?? "").trim();
 
+      const varianteIdRaw = it?.productoVarianteId ?? it?.ProductoVarianteId ?? null;
+      const varianteIdNum =
+        varianteIdRaw != null && varianteIdRaw !== "" ? Number(varianteIdRaw) : NaN;
+      const varianteId =
+        Number.isFinite(varianteIdNum) && varianteIdNum > 0 ? varianteIdNum : undefined;
+
+      const tallaV = it?.talla ?? it?.Talla ?? it?.variante?.talla ?? it?.Variante?.Talla ?? "";
+      const tallaStr = String(tallaV ?? "").trim();
+      const tallaSolo =
+        tallaStr && tallaStr.toUpperCase() !== "N/A" ? tallaStr : "";
+
       return {
         lineId,
         id: Number.isNaN(Number(productoId)) ? idx : Number(productoId),
+        varianteId,
         name: String(name),
         price: Number.isFinite(computedPrice) ? computedPrice : 0,
         qty: qty > 0 ? qty : 0,
         opcionesSeleccionadas,
         opcionesKey,
-        opcionesResumen,
+        opcionesResumen: varianteId ? opcionesResumen || tallaSolo : opcionesResumen,
         notas,
+        talla: tallaSolo || undefined,
       };
     })
     .filter((x) => x.qty > 0);
@@ -161,7 +240,8 @@ export function mapBackendItemsToCart(items) {
 /** Líneas para modal de cobro / pre-cuenta local (mismo shape que espera el POS). */
 export function posCartToModalLines(cart) {
   return cart.map((x) => {
-    const resumen = opcionesResumenSoloTextoOpcion(x.opcionesResumen ?? "");
+    const rawClean = compactVarianteEtiquetaCarrito(x.opcionesResumen ?? "", x.talla);
+    const resumen = opcionesResumenSoloTextoOpcion(rawClean);
     const note = String(x.notas ?? "").trim();
     let name = resumen ? `${x.name} — ${resumen}` : x.name;
     if (note) name = `${name} · ${note}`;

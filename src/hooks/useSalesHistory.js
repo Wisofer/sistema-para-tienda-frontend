@@ -67,9 +67,23 @@ export function useSalesHistory(searchParam = "", pageSize = DEFAULT_PAGE_SIZE) 
     return result;
   }, [fetchList]);
 
-  const getTicketPdfUrl = useCallback(async (id) => {
-    return salesHistoryApi.ticketPdfUrl(id);
+  const downloadTicketPdf = useCallback(async (id) => {
+    return salesHistoryApi.downloadTicketPdf(id);
   }, []);
 
-  return { sales, loading, error, totalCount, totalPages, page, pageSize, setPage, refetch: fetchList, cancel, addPayment, createOrReuseInvoice, getTicketPdfUrl };
+  return {
+    sales,
+    loading,
+    error,
+    totalCount,
+    totalPages,
+    page,
+    pageSize,
+    setPage,
+    refetch: fetchList,
+    cancel,
+    addPayment,
+    createOrReuseInvoice,
+    downloadTicketPdf,
+  };
 }

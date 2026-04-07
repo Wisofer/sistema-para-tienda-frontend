@@ -51,6 +51,28 @@ export function movementProductLabel(m, productList) {
  * @param {Object} m - El objeto de movimiento.
  * @returns {string|null}
  */
+/**
+ * Unifica campos camelCase / PascalCase del API para tablas de movimientos.
+ */
+export function normalizeMovementRow(m) {
+  if (!m || typeof m !== "object") return m;
+  const tipoRaw = m.tipo ?? m.Tipo ?? m.tipoMovimiento ?? m.TipoMovimiento ?? "";
+  const s = String(tipoRaw).trim().toLowerCase();
+  let tipo = "—";
+  if (s.includes("entrada")) tipo = "Entrada";
+  else if (s.includes("salida")) tipo = "Salida";
+  else if (s.includes("ajuste")) tipo = "Ajuste";
+  else if (String(tipoRaw).trim()) tipo = String(tipoRaw).trim();
+  return {
+    ...m,
+    tipo,
+    cantidad: m.cantidad ?? m.Cantidad ?? 0,
+    subtipo: m.subtipo ?? m.Subtipo ?? m.subTipo ?? "",
+    observaciones: m.observaciones ?? m.Observaciones ?? "",
+    fecha: m.fecha ?? m.Fecha ?? m.fechaCreacion ?? m.FechaCreacion ?? m.createdAt ?? m.CreatedAt,
+  };
+}
+
 export function formatMovementDate(m) {
   const raw = m?.fecha ?? m?.Fecha ?? m?.fechaCreacion ?? m?.FechaCreacion ?? m?.createdAt ?? m?.CreatedAt;
   if (raw == null || raw === "") return null;

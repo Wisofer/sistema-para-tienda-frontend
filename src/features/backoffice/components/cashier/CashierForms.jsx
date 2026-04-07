@@ -1,4 +1,6 @@
 import React from "react";
+import { useOnlineStatus } from "../../../../hooks/useOnlineStatus.js";
+import { offlineButtonTitle } from "../../../../constants/networkUi.js";
 
 /**
  * Formularios de Apertura y Cierre de Caja.
@@ -16,6 +18,8 @@ export function CashierForms({
   processing,
   currencySymbol 
 }) {
+  const isOnline = useOnlineStatus();
+
   // Formulario de Apertura (Inyectado en la pantalla de bienvenida)
   if (showApertura) {
     return (
@@ -26,15 +30,16 @@ export function CashierForms({
             <p className="text-sm font-medium text-slate-500">Registra el monto inicial de la jornada.</p>
           </div>
           <button
+            type="button"
             onClick={() => setShowApertura(false)}
-            className="rounded-lg bg-slate-100 px-4 py-2 text-xs font-black uppercase tracking-widest text-slate-500 hover:bg-slate-200"
+            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
           >
             Volver
           </button>
         </div>
         <form onSubmit={handleAperturaCaja} className="space-y-4">
           <div className="rounded-xl bg-slate-50 p-4">
-            <label className="mb-2 block text-sm font-black uppercase tracking-widest text-slate-400">Monto inicial ({currencySymbol})</label>
+            <label className="mb-2 block text-sm font-medium text-slate-700">Monto inicial ({currencySymbol})</label>
             <input
               type="number"
               step="0.01"
@@ -42,24 +47,25 @@ export function CashierForms({
               value={montoInicial}
               onChange={(e) => setMontoInicial(e.target.value)}
               placeholder="0.00"
-              className="w-full bg-transparent text-2xl font-black text-slate-900 placeholder:text-slate-300 focus:outline-none"
+              className="w-full bg-transparent text-2xl font-semibold tabular-nums text-slate-900 placeholder:text-slate-300 focus:outline-none"
               required
               autoFocus
             />
           </div>
-          <p className="text-xs font-medium text-slate-400">Este monto representa el efectivo base (fondo de caja) con el que inicias ventas.</p>
+          <p className="text-xs text-slate-500">Efectivo base (fondo de caja) con el que inicias la jornada.</p>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="submit"
-              disabled={processing}
-              className="rounded-xl bg-green-600 py-3 text-sm font-bold text-white shadow-lg shadow-green-100 hover:bg-green-700 disabled:opacity-50 transition-all active:scale-[0.98]"
+              disabled={processing || !isOnline}
+              title={offlineButtonTitle(isOnline)}
+              className="rounded-xl bg-green-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-50"
             >
               Iniciar Operaciones
             </button>
             <button
               type="button"
               onClick={() => setShowApertura(false)}
-              className="rounded-xl bg-slate-800 py-3 text-sm font-bold text-white hover:bg-slate-900 transition-all active:scale-[0.98]"
+              className="rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
             >
               Cancelar
             </button>
@@ -73,22 +79,22 @@ export function CashierForms({
   if (showCierreForm) {
     return (
       <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-in slide-in-from-bottom-2 duration-300">
-        <h3 className="mb-4 text-sm font-black uppercase tracking-widest text-slate-400">Formulario de Arqueo</h3>
+        <h3 className="mb-4 text-sm font-semibold text-slate-800">Cierre y arqueo</h3>
         <form onSubmit={handleCerrarCaja} className="grid grid-cols-1 gap-4 sm:grid-cols-3">
           <div className="rounded-xl border border-slate-200 px-4 py-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Efectivo Real</label>
+            <label className="text-xs font-medium text-slate-600">Efectivo contado</label>
             <input
               type="number"
               step="0.01"
               value={cierreForm.montoReal}
               onChange={(e) => setCierreForm((s) => ({ ...s, montoReal: e.target.value }))}
               placeholder="Contado"
-              className="w-full bg-transparent text-lg font-bold text-slate-900 focus:outline-none"
+              className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-900 focus:outline-none"
               required
             />
           </div>
           <div className="rounded-xl border border-slate-200 px-4 py-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Observaciones</label>
+            <label className="text-xs font-medium text-slate-600">Observaciones</label>
             <input
               value={cierreForm.observaciones}
               onChange={(e) => setCierreForm((s) => ({ ...s, observaciones: e.target.value }))}
@@ -98,8 +104,9 @@ export function CashierForms({
           </div>
           <button
             type="submit"
-            disabled={processing}
-            className="rounded-xl bg-red-600 px-6 py-3 text-sm font-bold text-white shadow-lg shadow-red-100 hover:bg-red-700 disabled:opacity-50 transition-all active:scale-[0.98]"
+            disabled={processing || !isOnline}
+            title={offlineButtonTitle(isOnline)}
+            className="rounded-xl bg-red-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
           >
             Finalizar Turno
           </button>

@@ -15,7 +15,7 @@ export function GlobalMovementsModal({
   if (!open) return null;
 
   return (
-    <BackofficeDialog MAX_WIDTH="max-w-4xl" onBackdropClick={onClose}>
+    <BackofficeDialog maxWidthClass="max-w-4xl" onBackdropClick={onClose}>
       <div className="flex w-full flex-col">
         <div className="flex items-center justify-between">
           <h3 className="text-xl font-bold text-slate-800 tracking-tight uppercase">
@@ -31,7 +31,7 @@ export function GlobalMovementsModal({
 
         <div className="mt-4 max-h-[70vh] overflow-auto rounded-2xl border border-slate-100 ring-4 ring-slate-50">
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-900 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <thead className="sticky top-0 border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-600">
               <tr>
                 <th className="px-4 py-4">Fecha</th>
                 <th className="px-4 py-4">Tipo</th>
@@ -110,7 +110,7 @@ export function ProductHistoryModal({
 
         <div className="mt-4 max-h-80 overflow-auto rounded-xl border border-slate-100 ring-4 ring-slate-50">
           <table className="w-full text-left text-sm">
-            <thead className="sticky top-0 bg-slate-900 text-[10px] font-black uppercase tracking-widest text-slate-400">
+            <thead className="sticky top-0 border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-600">
               <tr>
                 <th className="px-4 py-3">Fecha</th>
                 <th className="px-4 py-3">Tipo</th>

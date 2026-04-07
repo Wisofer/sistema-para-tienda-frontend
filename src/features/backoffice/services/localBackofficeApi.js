@@ -238,22 +238,22 @@ export const localBackofficeApi = {
     const sales = storage.get(SALES_CACHE_PREFIX) || [];
     const products = storage.get(PRODUCTS_CACHE_KEY) || [];
     const detalles = body.detalles || [];
-    detalles.forEach(d => { 
-      const idx = products.findIndex(p => p.id === d.productoId); 
-      if (idx !== -1) {
-        const p = products[idx];
-        // Si tiene variante, descontar de la variante
-        if (d.varianteId && p.variantes) {
-          const vIdx = p.variantes.findIndex(v => v.id === d.varianteId);
-          if (vIdx !== -1) {
-            p.variantes[vIdx].stock = Math.max(0, p.variantes[vIdx].stock - d.cantidad);
-          }
+    detalles.forEach(d => {
+      const idx = products.findIndex(p => p.id === d.productoId);
+      if (idx === -1) return;
+      const p = products[idx];
+      let descontadoEnVariante = false;
+      if (d.varianteId && p.variantes) {
+        const vIdx = p.variantes.findIndex(v => v.id === d.varianteId);
+        if (vIdx !== -1) {
+          p.variantes[vIdx].stock = Math.max(0, p.variantes[vIdx].stock - d.cantidad);
+          descontadoEnVariante = true;
         }
-        // Solo descontar si el producto tiene el control de stock activado
-        if (p.controlarStock) {
-          p.stock = Math.max(0, p.stock - d.cantidad);
-        }
-      } 
+      }
+      // Stock agregado del producto: solo si no se descontó ya en la variante (evita −2 por línea en mock)
+      if (p.controlarStock && !descontadoEnVariante) {
+        p.stock = Math.max(0, p.stock - d.cantidad);
+      }
     });
     const newSale = { id: Date.now(), fecha: new Date().toISOString(), total: body.montoPagado, montoTotal: body.montoPagado, metodoPago: body.tipoPago, detalles, numeroFactura: `FAC-${sales.length + 1001}`, vuelto: body.vueltoCordobas, cajero: "Administrador" };
     storage.set(SALES_CACHE_PREFIX, [newSale, ...sales]);
@@ -297,8 +297,60 @@ export const localBackofficeApi = {
   configuraciones: async () => ([{ clave: "portal_tagline", valor: "Sistema de Facturación e Inventario" }, { clave: "moneda_principal", valor: "C$" }]), upsertConfiguracion: async () => ({ success: true }),
   reportesResumenVentas: async () => { const s = storage.get(SALES_CACHE_PREFIX) || []; return { items: s, total: s.length, montoTotal: s.reduce((a, b) => a + b.total, 0) }; },
   reportesResumenVentasDetalle: async () => ({ items: (storage.get(SALES_CACHE_PREFIX) || []) }),
+  reportesVentaTicketDetalle: async (id) => {
+    const sales = storage.get(SALES_CACHE_PREFIX) || [];
+    const s = sales.find((x) => String(x.id) === String(id));
+    if (!s) {
+      return { lineas: [], totalCobrado: 0, subtotalLineas: 0, cantidadLineas: 0, cantidadUnidades: 0 };
+    }
+    const detalles = s.detalles || [];
+    const lineas = detalles.map((d) => ({
+      productoNombre: d.nombreProducto || d.productoNombre || "Producto",
+      cantidad: d.cantidad,
+      precioUnitario: d.precioUnitario,
+      subtotal: d.subtotal ?? d.cantidad * d.precioUnitario,
+    }));
+    return {
+      numeroTicket: s.numeroFactura,
+      fecha: s.fecha,
+      lineas,
+      subtotalLineas: s.total,
+      totalCobrado: s.total,
+      cantidadLineas: lineas.length,
+      cantidadUnidades: lineas.reduce((a, l) => a + l.cantidad, 0),
+    };
+  },
+  reportesExportarResumenVentasExcel: async () => {},
+  reportesExportarVentasDetalleExcel: async () => {},
   reportesProductosTop: async () => (storage.get(PRODUCTS_CACHE_KEY) || []).slice(0, 10).map(p => ({ nombre: p.nombre, cantidad: 50, total: p.precioVenta * 50 })),
   reportesVentasPorCategoria: async () => [], reportesVentasPorMesero: async () => ({ items: [] }),
+  reportesVentasPorCategoriaDesglose: async () => ({
+    totalCategorias: 1,
+    items: [
+      {
+        categoria: "Ropa",
+        monto: 200,
+        cantidad: 2,
+        productos: [
+          {
+            productoId: 101,
+            codigoProducto: "R001",
+            productoNombre: "Camisa demo",
+            cantidad: 2,
+            monto: 200,
+          },
+        ],
+      },
+    ],
+  }),
+  reportesExportarVentasPorCategoriaDesgloseExcel: async () => {},
+  reportesVentasPorVendedor: async () => ({
+    desde: "",
+    hasta: "",
+    total: 0,
+    items: [],
+  }),
+  reportesExportarVentasPorVendedorExcel: async () => {},
 
   // Whatsapp stubs
   listPlantillasWhatsapp: async () => ({ items: [] }), getPlantillaWhatsapp: async () => ({}), createPlantillaWhatsapp: async () => ({}), updatePlantillaWhatsapp: async () => ({}), deletePlantillaWhatsapp: async () => ({}), marcarDefaultPlantillaWhatsapp: async () => ({}),

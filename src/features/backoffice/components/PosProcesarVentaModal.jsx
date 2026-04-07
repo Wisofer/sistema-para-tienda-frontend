@@ -1,8 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { DEFAULT_TIPO_CAMBIO_USD, formatCurrency } from "../utils/currency.js";
+import { backofficeApi } from "../services/backofficeApi.js";
+import { useOnlineStatus } from "../../../hooks/useOnlineStatus.js";
+import { offlineButtonTitle } from "../../../constants/networkUi.js";
+
+function nombreClienteRow(c) {
+  return String(c?.nombre ?? c?.nombreCompleto ?? c?.Nombre ?? c?.NombreCompleto ?? "").trim() || `Cliente #${c?.id ?? ""}`;
+}
 
 /**
- * Modal "Procesar venta": Diseño Compacto y Centrado (Versión del Usuario)
+ * Modal "Procesar venta": totales, efectivo recibido / vuelto, u otros métodos al total exacto.
+ * No hay pago mixto en UI: Tarjeta/Transferencia fijan el monto al total.
  */
 export function PosProcesarVentaModal({
   open,
@@ -10,6 +18,7 @@ export function PosProcesarVentaModal({
   mesaLabel,
   currencySymbol = "C$",
   lines = [],
+  /** Total desde backend (preferido) */
   totalOrdenBackend,
   exchangeRate,
   busy = false,
@@ -20,9 +29,14 @@ export function PosProcesarVentaModal({
   const [tipoPago, setTipoPago] = useState("Efectivo");
   const [moneda, setMoneda] = useState("C$");
   const [comentario, setComentario] = useState("");
-  
+  const [clientes, setClientes] = useState([]);
+  const [clientesLoading, setClientesLoading] = useState(false);
+  /** "" = sin cliente (no se envía ClienteId) */
+  const [clienteId, setClienteId] = useState("");
   const tc = Number(exchangeRate) > 0 ? Number(exchangeRate) : DEFAULT_TIPO_CAMBIO_USD;
   const isUsd = moneda === "USD";
+  const isOnline = useOnlineStatus();
+  const blockActions = busy || !isOnline;
 
   const subtotalLineas = useMemo(
     () => lines.reduce((s, x) => s + Number(x.lineTotal ?? (x.price || 0) * (x.qty || 0)), 0),
@@ -33,7 +47,7 @@ export function PosProcesarVentaModal({
 
   const totalDesdeBackend =
     totalOrdenBackend != null && Number.isFinite(Number(totalOrdenBackend)) ? Number(totalOrdenBackend) : null;
-  
+  /** Base imponible: preferimos total del sistema si existe; si no, suma de líneas. Luego restamos descuento. */
   const baseAntesDescuento =
     totalDesdeBackend != null && totalDesdeBackend > 0 ? totalDesdeBackend : subtotalLineas;
   const totalAPagarCordobas = Math.max(0, baseAntesDescuento - descuentoNum);
@@ -50,6 +64,29 @@ export function PosProcesarVentaModal({
     setComentario("");
     setTipoPago("Efectivo");
     setMoneda("C$");
+    setClienteId("");
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    setClientesLoading(true);
+    backofficeApi
+      .listClientes({ page: 1, pageSize: 500 })
+      .then((data) => {
+        if (cancelled) return;
+        const raw = data?.items ?? data?.Items ?? data?.data?.items ?? (Array.isArray(data) ? data : []);
+        setClientes(Array.isArray(raw) ? raw : []);
+      })
+      .catch(() => {
+        if (!cancelled) setClientes([]);
+      })
+      .finally(() => {
+        if (!cancelled) setClientesLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [open]);
 
   useEffect(() => {
@@ -58,6 +95,7 @@ export function PosProcesarVentaModal({
   }, [open, totalAPagarMoneda, moneda]);
 
   useEffect(() => {
+    if (!open) return;
     if (tipoPago !== "Efectivo") {
       setMontoRecibido(String(totalAPagarMoneda.toFixed(2)));
     }
@@ -67,9 +105,11 @@ export function PosProcesarVentaModal({
 
   const handleSubmit = (e) => {
     e.preventDefault();
+    if (busy || !isOnline) return;
     if (tipoPago === "Efectivo" && recibidoCordobas + 1e-6 < totalAPagarCordobas) {
       return;
     }
+    const cid = clienteId !== "" && clienteId != null ? Number(clienteId) : NaN;
     onGuardar?.({
       descuento: descuentoNum,
       subtotalLineas,
@@ -83,42 +123,82 @@ export function PosProcesarVentaModal({
       tipoPago,
       moneda,
       comentario: comentario.trim(),
+      clienteId: Number.isFinite(cid) && cid > 0 ? cid : null,
     });
   };
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm p-4">
-      <button type="button" className="absolute inset-0 cursor-default" onClick={onClose} disabled={busy}></button>
-      
+    <div className="fixed inset-0 z-[200] flex items-end justify-center bg-slate-900/50 p-0 sm:items-center sm:p-4">
+      <button type="button" className="absolute inset-0 cursor-default" aria-label="Cerrar" onClick={onClose} disabled={busy} />
       <form
         onSubmit={handleSubmit}
-        className="relative z-[201] flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl"
+        className="relative z-[201] flex max-h-[95vh] w-full max-w-lg flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl sm:max-h-[90vh] sm:rounded-2xl"
       >
-        {/* Cabecera Compacta */}
-        <div className="border-b border-slate-100 px-5 py-3">
-          <h2 className="text-lg font-bold text-slate-800">Procesar venta</h2>
-          <p className="text-[11px] font-medium text-slate-400">{mesaLabel || "VENTA DIRECTA"}</p>
+        <div className="border-b border-slate-100 px-4 py-3 sm:px-5">
+          <div className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3">
+            <div className="min-w-0">
+              <h2 className="text-lg font-semibold leading-tight tracking-tight text-slate-900">Procesar venta</h2>
+              <p className="mt-0.5 text-[11px] leading-snug text-slate-500">{mesaLabel || "Venta directa"}</p>
+            </div>
+            <div
+              className={`relative flex w-full max-w-full items-center rounded-full border border-slate-200/90 bg-gradient-to-b from-white to-slate-50/90 py-1 pl-2 pr-7 shadow-[0_1px_2px_rgba(15,23,42,0.04)] ring-1 ring-slate-100 sm:mt-0 sm:w-auto sm:max-w-[13rem] sm:justify-self-end ${blockActions || clientesLoading ? "opacity-60" : ""}`}
+            >
+              <span className="pointer-events-none flex shrink-0 pl-0.5 text-slate-400" aria-hidden>
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.5 19.5a7.5 7.5 0 0115 0"
+                  />
+                </svg>
+              </span>
+              <select
+                value={clienteId}
+                onChange={(e) => setClienteId(e.target.value)}
+                disabled={blockActions || clientesLoading}
+                aria-label="Seleccionar cliente"
+                className="min-w-0 flex-1 cursor-pointer appearance-none border-0 bg-transparent py-1 pl-1.5 pr-0 text-left text-xs font-medium text-slate-700 focus:outline-none focus:ring-0 disabled:cursor-not-allowed"
+              >
+                <option value="">{clientesLoading ? "Cargando…" : "Seleccionar cliente"}</option>
+                {clientes.map((c) => {
+                  const id = c?.id ?? c?.Id;
+                  if (id == null) return null;
+                  return (
+                    <option key={id} value={String(id)}>
+                      {nombreClienteRow(c)}
+                    </option>
+                  );
+                })}
+              </select>
+              <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden>
+                <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-2 scrollbar-hide">
-          {/* Tabla Mini */}
-          <div className="mt-2 overflow-hidden rounded-lg border border-slate-100">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3 sm:px-5">
+          <div className="mt-4 overflow-hidden rounded-lg border border-slate-200">
             <table className="w-full text-left text-[11px]">
-              <thead className="bg-slate-50 text-slate-500 font-bold">
+              <thead className="bg-slate-100 text-slate-600">
                 <tr>
-                  <th className="px-2 py-1.5 uppercase">Producto</th>
-                  <th className="px-2 py-1.5 text-center uppercase">Cant.</th>
-                  <th className="px-2 py-1.5 text-right uppercase">Total</th>
+                  <th className="px-2 py-2">Producto</th>
+                  <th className="px-2 py-2">Cant.</th>
+                  <th className="px-2 py-2 text-right">P.U</th>
+                  <th className="px-2 py-2 text-right">P.T</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody>
                 {lines.map((row, i) => {
                   const pt = Number(row.lineTotal ?? (row.price || 0) * (row.qty || 0));
                   return (
-                    <tr key={`${row.id}-${i}`} className="text-slate-600">
-                      <td className="px-2 py-1.5 line-clamp-1">{row.name}</td>
-                      <td className="px-2 py-1.5 text-center">{row.qty}</td>
-                      <td className="px-2 py-1.5 text-right font-semibold">{formatCurrency(pt, currencySymbol)}</td>
+                    <tr key={`${row.id}-${i}`} className="border-t border-slate-100">
+                      <td className="px-2 py-1.5 text-slate-800">{row.name}</td>
+                      <td className="px-2 py-1.5">{row.qty}</td>
+                      <td className="px-2 py-1.5 text-right">{formatCurrency(row.price, currencySymbol)}</td>
+                      <td className="px-2 py-1.5 text-right font-medium">{formatCurrency(pt, currencySymbol)}</td>
                     </tr>
                   );
                 })}
@@ -126,101 +206,123 @@ export function PosProcesarVentaModal({
             </table>
           </div>
 
-          {/* Resumen de Totales */}
-          <div className="mt-3 space-y-1.5 border-b border-slate-100 pb-3">
-            <div className="flex justify-between text-xs text-slate-600">
+          <div className="mt-3 space-y-1 text-right text-sm text-slate-700">
+            <div className="flex justify-between gap-2">
               <span>Subtotal</span>
               <span>{formatCurrency(subtotalLineas, currencySymbol)}</span>
             </div>
-            <div className="flex items-center justify-between text-xs text-slate-600">
-              <span>Total descuento</span>
+            <label className="flex items-center justify-between gap-2 text-left">
+              <span className="text-xs font-medium text-slate-600">Total descuento</span>
               <input
                 type="number"
+                min="0"
+                step="0.01"
                 value={descuento}
                 onChange={(e) => setDescuento(e.target.value)}
-                className="w-20 rounded border border-slate-200 px-2 py-0.5 text-right font-bold text-slate-800 focus:border-amber-500 focus:outline-none"
-                placeholder="0.00"
+                className="w-28 rounded border border-slate-300 px-2 py-1 text-right text-sm"
+                disabled={blockActions}
               />
-            </div>
-            <div className="flex justify-between pt-1 text-lg font-black text-slate-900 border-t border-slate-50">
-              <span className="uppercase text-sm">Total a pagar</span>
+            </label>
+            {totalDesdeBackend != null && totalDesdeBackend > 0 && Math.abs(totalDesdeBackend - subtotalLineas) > 0.01 && (
+              <p className="text-[11px] text-amber-700">
+                Total en sistema: {formatCurrency(totalDesdeBackend, currencySymbol)} (líneas:{" "}
+                {formatCurrency(subtotalLineas, currencySymbol)})
+              </p>
+            )}
+            <div className="flex justify-between border-t border-slate-200 pt-1 text-base font-bold text-slate-900">
+              <span>Total a pagar</span>
               <span>{formatCurrency(totalAPagarMoneda, isUsd ? "$" : currencySymbol)}</span>
             </div>
+            {isUsd && (
+              <p className="text-[11px] text-slate-500">
+                Equivalente: {formatCurrency(totalAPagarCordobas, currencySymbol)} (TC: {tc.toFixed(2)})
+              </p>
+            )}
           </div>
 
-          {/* Formulario Compacto (2 columnas) */}
-          <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-400">Recibido ({moneda})</label>
+          <div className="mt-4 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <label className="text-xs font-medium text-slate-600">
+              {tipoPago === "Efectivo" ? "Total efectivo (recibido)" : "Monto cobrado (= total)"}
               <input
                 type="number"
+                min="0"
+                step="0.01"
                 value={montoRecibido}
                 onChange={(e) => setMontoRecibido(e.target.value)}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-bold text-slate-800 focus:border-amber-500 focus:outline-none"
-                disabled={busy || tipoPago !== "Efectivo"}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                disabled={blockActions || tipoPago !== "Efectivo"}
               />
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-400">Vuelto ({moneda})</label>
-              <div className="w-full rounded-lg border border-slate-100 bg-slate-50 px-3 py-2 text-sm font-black text-slate-800">
-                {vueltoMoneda.toFixed(2)}
-              </div>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-400">Pago</label>
-              <select 
-                value={tipoPago} 
-                onChange={(e) => setTipoPago(e.target.value)} 
-                className="w-full rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold text-slate-700 focus:border-amber-500 focus:outline-none cursor-pointer"
+            </label>
+            <label className="text-xs font-medium text-slate-600">
+              Vuelto ({isUsd ? "C$" : currencySymbol})
+              <input
+                readOnly
+                value={vueltoCordobas.toFixed(2)}
+                className="mt-1 w-full rounded-lg border border-slate-200 bg-slate-50 px-2 py-2 text-sm text-slate-800"
+              />
+              {isUsd && <p className="mt-1 text-[11px] text-slate-500">Equivalente en USD: {vueltoMoneda.toFixed(2)}</p>}
+            </label>
+            <label className="text-xs font-medium text-slate-600">
+              Método de pago
+              <select
+                value={tipoPago}
+                onChange={(e) => setTipoPago(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                disabled={blockActions}
               >
                 <option>Efectivo</option>
                 <option>Tarjeta</option>
                 <option>Transferencia</option>
               </select>
-            </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-400">Moneda</label>
-              <select 
-                value={moneda} 
-                onChange={(e) => setMoneda(e.target.value)} 
-                className="w-full rounded-lg border border-slate-200 px-2 py-2 text-xs font-bold text-slate-700 focus:border-amber-500 focus:outline-none cursor-pointer"
+            </label>
+            <label className="text-xs font-medium text-slate-600">
+              Moneda
+              <select
+                value={moneda}
+                onChange={(e) => setMoneda(e.target.value)}
+                className="mt-1 w-full rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                disabled={blockActions}
               >
                 <option value="C$">Córdobas (C$)</option>
                 <option value="USD">Dólares ($)</option>
               </select>
-            </div>
-            <div className="col-span-2 space-y-1">
-              <label className="text-[10px] font-black uppercase text-slate-400">Comentario</label>
+            </label>
+            <label className="text-xs font-medium text-slate-600 sm:col-span-2">
+              Comentario
               <textarea
                 value={comentario}
                 onChange={(e) => setComentario(e.target.value)}
-                rows={1}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-xs font-medium text-slate-600 resize-none focus:border-amber-500 focus:outline-none"
-                placeholder="Opcional..."
+                rows={2}
+                className="mt-1 w-full resize-none rounded-lg border border-slate-300 px-2 py-2 text-sm"
+                disabled={blockActions}
               />
-            </div>
+            </label>
           </div>
 
           {tipoPago === "Efectivo" && recibidoCordobas + 1e-6 < totalAPagarCordobas && (
-            <p className="mt-2 text-[10px] font-bold text-red-500 uppercase tracking-tight">Monto insuficiente</p>
+            <p className="mt-2 text-xs font-medium text-red-600">El efectivo recibido debe ser mayor o igual al total a pagar.</p>
           )}
         </div>
 
-        {/* Botones */}
-        <div className="flex gap-3 bg-white px-5 py-4 border-t border-slate-50">
+        <div className="flex gap-2 border-t border-slate-100 px-4 py-3 sm:px-5">
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 rounded-xl border border-red-100 py-3 text-xs font-bold text-red-500 transition hover:bg-red-50"
+            disabled={busy}
+            className="flex-1 rounded-xl border border-red-200 bg-red-50 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-100 disabled:opacity-50"
           >
             Cancelar
           </button>
           <button
             type="submit"
-            disabled={busy || (tipoPago === "Efectivo" && recibidoCordobas + 1e-6 < totalAPagarCordobas)}
-            className="flex-1 rounded-xl bg-amber-500 py-3 text-xs font-bold text-white shadow-lg shadow-amber-100 transition hover:bg-amber-600 disabled:bg-slate-200 disabled:shadow-none"
+            disabled={
+              blockActions || (tipoPago === "Efectivo" && recibidoCordobas + 1e-6 < totalAPagarCordobas)
+            }
+            aria-busy={busy}
+            title={offlineButtonTitle(isOnline)}
+            className="flex-1 rounded-xl bg-amber-500 py-2.5 text-sm font-semibold text-white hover:bg-amber-600 disabled:opacity-50"
           >
-            {busy ? "Procesando..." : "Cobrar"}
+            {busy ? "Cobrando…" : "Cobrar"}
           </button>
         </div>
       </form>

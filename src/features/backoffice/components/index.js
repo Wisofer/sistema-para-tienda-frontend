@@ -8,8 +8,8 @@ export {
   StatCardsSkeleton,
 } from "./Skeletons.jsx";
 export { PosProcesarVentaModal } from "./PosProcesarVentaModal.jsx";
+export { PosVariantModal } from "./PosVariantModal.jsx";
 export { PosProductOpcionesModal } from "./PosProductOpcionesModal.jsx";
 export { PosInlineOpcionesPanel } from "./PosInlineOpcionesPanel.jsx";
 export { BackofficeDialog } from "./BackofficeDialog.jsx";
 export { BackofficeShellHeaderActions } from "./BackofficeShellHeaderActions.jsx";
-export { PosReceiptModal } from "./PosReceiptModal.jsx";

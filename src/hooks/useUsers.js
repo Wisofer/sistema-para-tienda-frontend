@@ -11,7 +11,8 @@ export function useUsers() {
     setError(null);
     try {
       const data = await usersApi.list();
-      setList(Array.isArray(data) ? data : []);
+      const items = data?.items ?? data;
+      setList(Array.isArray(items) ? items : []);
     } catch (e) {
       setError(e.message);
       setList([]);

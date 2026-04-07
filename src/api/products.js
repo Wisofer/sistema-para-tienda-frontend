@@ -1,6 +1,27 @@
-import { api } from "./client.js";
+import { api, fetchBlob } from "./client.js";
+import { getApiUrl } from "./config.js";
 
 const base = "/api/v1/productos";
+const inventarioBase = "/api/v1/inventario";
+
+/** URL absoluta para imágenes guardadas como ruta relativa en el servidor. */
+function resolveImagenUrl(val) {
+  if (val == null || typeof val !== "string") return val;
+  const v = val.trim();
+  if (!v) return v;
+  if (v.startsWith("http://") || v.startsWith("https://") || v.startsWith("data:")) return v;
+  if (v.startsWith("/")) return `${getApiUrl()}${v}`;
+  return v;
+}
+
+/** El API documenta pageSize máx. 200; valores mayores devuelven 400. */
+const MAX_PAGE_SIZE = 200;
+
+function clampPageSize(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x) || x < 1) return 20;
+  return Math.min(Math.floor(x), MAX_PAGE_SIZE);
+}
 
 function qs(params) {
   const s = new URLSearchParams();
@@ -9,6 +30,80 @@ function qs(params) {
   });
   const str = s.toString();
   return str ? `?${str}` : "";
+}
+
+function entradaPayload(body) {
+  const pid = Number(body.productoId ?? body.ProductoId);
+  const cantidad = Number(body.cantidad ?? body.Cantidad ?? 0);
+  const costoUnitario = Number(body.costoUnitario ?? body.CostoUnitario ?? 0);
+  const observaciones = body.observaciones ?? body.Observaciones;
+  const provRaw = body.proveedorId ?? body.ProveedorId;
+  const numeroRef =
+    body.numeroReferencia ??
+    body.NumeroReferencia ??
+    body.numeroFactura ??
+    body.NumeroFactura;
+  const varianteRaw = body.productoVarianteId ?? body.ProductoVarianteId;
+
+  const out = {
+    productoId: pid,
+    cantidad,
+    costoUnitario,
+    ...(observaciones != null && String(observaciones).trim() !== ""
+      ? { observaciones }
+      : {}),
+    ...(provRaw != null && provRaw !== "" ? { proveedorId: Number(provRaw) } : {}),
+    ...(numeroRef != null && String(numeroRef).trim() !== ""
+      ? { numeroReferencia: String(numeroRef).trim() }
+      : {}),
+    ...(varianteRaw != null && varianteRaw !== ""
+      ? { productoVarianteId: Number(varianteRaw) }
+      : {}),
+  };
+  return out;
+}
+
+function salidaPayload(body) {
+  const pid = Number(body.productoId ?? body.ProductoId);
+  const varianteRaw = body.productoVarianteId ?? body.ProductoVarianteId;
+  const subRaw = body.subtipo ?? body.Subtipo;
+  const subTrim = subRaw != null ? String(subRaw).trim() : "";
+  return {
+    productoId: pid,
+    cantidad: Number(body.cantidad ?? body.Cantidad ?? 0),
+    ...(body.observaciones != null && String(body.observaciones ?? body.Observaciones ?? "").trim() !== ""
+      ? { observaciones: body.observaciones ?? body.Observaciones }
+      : {}),
+    /** Si no se envía o viene vacío, el backend usa "Salida manual". */
+    ...(subTrim !== "" ? { subtipo: subTrim } : {}),
+    ...(varianteRaw != null && varianteRaw !== ""
+      ? { productoVarianteId: Number(varianteRaw) }
+      : {}),
+  };
+}
+
+function ajustePayload(body) {
+  const pid = Number(body.productoId ?? body.ProductoId);
+  const varianteRaw = body.productoVarianteId ?? body.ProductoVarianteId;
+  const stockFisico = Number(
+    body.stockFisicoReal ??
+      body.StockFisicoReal ??
+      body.cantidadNueva ??
+      body.CantidadNueva ??
+      body.cantidad ??
+      body.Cantidad ??
+      0
+  );
+  return {
+    productoId: pid,
+    stockFisicoReal: stockFisico,
+    ...(body.observaciones != null && String(body.observaciones ?? body.Observaciones ?? "").trim() !== ""
+      ? { observaciones: body.observaciones ?? body.Observaciones }
+      : {}),
+    ...(varianteRaw != null && varianteRaw !== ""
+      ? { productoVarianteId: Number(varianteRaw) }
+      : {}),
+  };
 }
 
 function base64ToBlob(base64) {
@@ -34,14 +129,21 @@ function toBackendProduct(body) {
   const fd = new FormData();
   fd.append("Codigo", body.codigo || body.sku || "");
   fd.append("Nombre", body.nombre || "");
+  if (body.descripcion != null && String(body.descripcion).trim() !== "") {
+    fd.append("Descripcion", String(body.descripcion));
+  }
   fd.append("Precio", Number(body.precioVenta || body.precio || 0));
   fd.append("PrecioCompra", Number(body.precioCompra || 0));
   fd.append("Talla", body.talla || "N/A");
-  fd.append("StockActual", Number(body.stock || 0));
-  fd.append("StockMinimo", Number(body.stockMinimo || 0));
+  if (body.color != null && String(body.color).trim() !== "") {
+    fd.append("Color", String(body.color));
+  }
+  const ctrl = Boolean(body.controlarStock);
+  fd.append("StockActual", ctrl ? Number(body.stock || 0) : 0);
+  fd.append("StockMinimo", ctrl ? Number(body.stockMinimo || 0) : 0);
   fd.append("CategoriaProductoId", Number(body.categoriaProductoId || 0));
-  fd.append("ControlarStock", Boolean(body.controlarStock));
-  fd.append("Activo", Boolean(body.activo !== false)); // Default to true
+  fd.append("ControlarStock", ctrl ? "true" : "false");
+  fd.append("Activo", body.activo !== false ? "true" : "false");
   
   if (body.proveedorId) {
     fd.append("ProveedorId", Number(body.proveedorId));
@@ -58,30 +160,72 @@ function toBackendProduct(body) {
   return fd;
 }
 
+/** Normaliza variantes del API (listado/detalle producto). Reutilizado en POS. */
+export function mapVariantesFromBackend(raw) {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((v) => ({
+      id: Number(v?.id ?? v?.Id),
+      talla: v?.talla ?? v?.Talla ?? "",
+      color: v?.color ?? v?.Color ?? "",
+      stock: Number(v?.stock ?? v?.Stock ?? 0),
+      precioAdicional: Number(v?.precioAdicional ?? v?.PrecioAdicional ?? 0),
+      sku: v?.sku ?? v?.Sku ?? "",
+    }))
+    .filter((v) => Number.isFinite(v.id) && v.id > 0);
+}
+
 /**
  * MAPEO: Backend (PascalCase) -> Frontend (camelCase para UI)
  */
 export function fromBackendProduct(p) {
   if (!p) return p;
+  const cat =
+    p.categoriaProducto ||
+    p.CategoriaProducto ||
+    p.categoria ||
+    p.Categoria ||
+    null;
+  const imagenRaw = p.imagenUrl || p.imagen || p.ImagenUrl || p.Imagen || "";
   return {
-    id: p.id || p.Id,
-    codigo: p.codigo || p.Codigo,
-    nombre: p.nombre || p.Nombre,
-    precioVenta: p.precio || p.Precio || 0,
-    precioCompra: p.precioCompra || p.PrecioCompra || 0,
+    id: p.id ?? p.Id,
+    codigo: p.codigo || p.Codigo || "",
+    nombre: p.nombre || p.Nombre || "",
+    descripcion: p.descripcion || p.Descripcion || "",
+    precioVenta: p.precio ?? p.Precio ?? 0,
+    precioCompra: p.precioCompra ?? p.PrecioCompra ?? 0,
     stock: p.stockTotal ?? p.StockTotal ?? p.stockActual ?? p.StockActual ?? p.stock ?? 0,
-    stockMinimo: p.stockMinimo || p.StockMinimo || 0,
-    talla: p.talla || p.Talla,
-    imagen: p.imagen || p.Imagen,
-    categoriaProductoId: p.categoriaProductoId || p.CategoriaProductoId,
+    stockMinimo: p.stockMinimo ?? p.StockMinimo ?? 0,
+    talla: p.talla || p.Talla || "",
+    color: p.color || p.Color || "",
+    imagen: resolveImagenUrl(typeof imagenRaw === "string" ? imagenRaw : ""),
+    categoriaProductoId: p.categoriaProductoId ?? p.CategoriaProductoId ?? cat?.id ?? cat?.Id ?? "",
+    categoriaNombre:
+      cat?.nombre ||
+      cat?.Nombre ||
+      p.nombreCategoria ||
+      p.NombreCategoria ||
+      p.categoriaNombre ||
+      "",
+    proveedorId: p.proveedorId ?? p.ProveedorId ?? "",
     controlarStock: p.controlarStock ?? p.ControlarStock ?? false,
-    activo: p.activo ?? p.Activo ?? true
+    activo: p.activo ?? p.Activo ?? true,
+    variantes: mapVariantesFromBackend(p.variantes ?? p.Variantes),
+    opcionesGrupos: p.opcionesGrupos ?? p.OpcionesGrupos ?? [],
   };
 }
 
+/**
+ * Inventario (JWT Admin): rutas bajo `/api/v1/inventario`
+ * - GET  /movimientos?desde=&hasta=&productoId=&tipo=&page=&pageSize=
+ * - GET  /movimientos/exportar?desde=&hasta=&productoId=&tipo=
+ * - POST /entrada | /salida | /ajuste
+ */
 export const productsApi = {
   list: async (params) => {
-    const raw = await api.get(`${base}${qs(params || {})}`);
+    const p = { ...(params || {}) };
+    if (p.pageSize != null) p.pageSize = clampPageSize(p.pageSize);
+    const raw = await api.get(`${base}${qs(p)}`);
     if (Array.isArray(raw)) return raw.map(fromBackendProduct);
     if (raw?.items) return { ...raw, items: raw.items.map(fromBackendProduct) };
     if (raw?.Items) return { ...raw, items: raw.Items.map(fromBackendProduct) };
@@ -89,6 +233,55 @@ export const productsApi = {
   },
   get: async (id) => fromBackendProduct(await api.get(`${base}/${id}`)),
   create: (body) => api.post(base, toBackendProduct(body)),
-  update: (id, body) => api.put(`${base}/${id}`, { ...toBackendProduct(body), id }),
+  /** Mismo cuerpo que create: multipart FormData (antes se rompía al hacer spread de FormData). */
+  update: (id, body) => api.put(`${base}/${id}`, toBackendProduct(body)),
   delete: (id) => api.delete(`${base}/${id}`),
+
+  /** Listado de movimientos de inventario (global o filtrado por productoId). API v1: `/api/v1/inventario/movimientos`. */
+  movimientos: (params) => {
+    const p = { ...(params || {}) };
+    if (p.pageSize != null) p.pageSize = clampPageSize(p.pageSize);
+    return api.get(`${inventarioBase}/movimientos${qs(p)}`);
+  },
+  /**
+   * Descarga Excel de movimientos (mismos filtros que listado, sin paginación).
+   * Requiere JWT Admin.
+   */
+  exportarMovimientosInventarioExcel: async (params) => {
+    const p = { ...(params || {}) };
+    delete p.page;
+    delete p.pageSize;
+    const q = qs(p);
+    const blob = await fetchBlob(`${inventarioBase}/movimientos/exportar${q}`);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `movimientos_inventario_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
+  },
+  /** Entrada de stock (Admin). Cuerpo: productoId, productoVarianteId?, cantidad, costoUnitario, proveedorId?, numeroReferencia?, observaciones? */
+  entradaStock: (body) => {
+    const pl = entradaPayload(body);
+    if (!Number.isFinite(pl.productoId) || pl.productoId <= 0) {
+      throw new Error("productoId inválido.");
+    }
+    return api.post(`${inventarioBase}/entrada`, pl);
+  },
+  /** Salida: productoId, productoVarianteId?, cantidad, subtipo (motivo; omitir si vacío → backend "Salida manual"), observaciones? */
+  salidaStock: (body) => api.post(`${inventarioBase}/salida`, salidaPayload(body)),
+  /** Ajuste stock físico: productoId, productoVarianteId?, stockFisicoReal, observaciones? */
+  ajusteStock: (body) => api.post(`${inventarioBase}/ajuste`, ajustePayload(body)),
+
+  /**
+   * Entrada mínima por id + cantidad (p. ej. `useProducts`). Recarga el producto tras el movimiento.
+   */
+  restock: async (productoId, cantidad) => {
+    const pl = entradaPayload({ productoId, cantidad, costoUnitario: 0 });
+    if (!Number.isFinite(pl.productoId) || pl.productoId <= 0) {
+      throw new Error("productoId inválido.");
+    }
+    await api.post(`${inventarioBase}/entrada`, pl);
+    return fromBackendProduct(await api.get(`${base}/${productoId}`));
+  },
 };

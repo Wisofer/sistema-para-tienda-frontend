@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from "react";
 import { backofficeApi } from "../services/backofficeApi.js";
 import { downloadCSV } from "../utils/exportUtils.js";
+import { normalizeMovementRow } from "../utils/inventoryUtils.js";
+import { normalizeReporteTicketDetalle } from "../utils/reportUtils.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 
 /**
@@ -22,6 +24,10 @@ export function useReports(currencySymbol = "C$") {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailOrder, setDetailOrder] = useState(null);
+
+  // Detalle productos por categoría (reporte categorías)
+  const [categoriaDetailOpen, setCategoriaDetailOpen] = useState(false);
+  const [categoriaDetailRow, setCategoriaDetailRow] = useState(null);
 
   const reportRange = {
     desde: range?.desde?.trim() || undefined,
@@ -51,21 +57,22 @@ export function useReports(currencySymbol = "C$") {
         setRows(details);
         setOrders(
           ordersItems.map((o, i) => ({
-            key: `${o.origen || o.origenPedido || "order"}-${o.id || i}-${i}`,
-            sourceId: o.id || o.Id || null,
-            numero: o.numero || o.codigo || `#${1200 + i}`,
-            fecha: o.fecha || o.fechaCreacion || o.createdAt || "",
-            origen: o.origen || o.origenPedido || "-",
+            key: `${o.origen || o.origenPedido || "order"}-${o.id ?? o.Id ?? i}-${i}`,
+            sourceId: o.id ?? o.Id ?? o.ventaId ?? o.VentaId ?? null,
+            numero: o.numero ?? o.numeroTicket ?? o.NumeroTicket ?? o.codigo ?? o.ticket ?? `#${i + 1}`,
+            fecha: o.fecha ?? o.fechaVenta ?? o.fechaCreacion ?? o.createdAt ?? "",
+            origen: o.origen ?? o.origenPedido ?? "POS",
             referencia:
-              o.mesa ||
-              o.mesaNumero ||
-              o.cliente ||
-              o.clienteNombre ||
-              (String(o.origen || o.origenPedido || "").toLowerCase() === "delivery"
-                ? "Delivery"
-                : "-"),
-            vendedor: o.mesero || o.usuario || "-",
-            monto: Number(o.monto ?? o.total ?? 0),
+              o.clienteNombre ??
+              o.ClienteNombre ??
+              o.cliente ??
+              o.mesa ??
+              o.mesaNumero ??
+              (String(o.origen || o.origenPedido || "").toLowerCase() === "delivery" ? "Delivery" : "-"),
+            vendedor: o.cajero ?? o.Cajero ?? o.mesero ?? o.usuario ?? "-",
+            monto: Number(o.totalCobrado ?? o.TotalCobrado ?? o.monto ?? o.total ?? 0),
+            cantidadLineas: o.cantidadLineas ?? o.CantidadLineas,
+            subtotalLineas: o.subtotalLineas ?? o.SubtotalLineas,
           }))
         );
         setSummary({
@@ -83,31 +90,58 @@ export function useReports(currencySymbol = "C$") {
       } else if (reportId === "vendedores") {
         const data = await backofficeApi.reportesVentasPorVendedor(reportRange);
         const items = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
-        const result = items
-          .map((r) => ({
-            vendedorId: r.meseroId ?? r.MeseroId ?? null,
-            vendedor: r.mesero || r.usuario || "Sin vendedor",
-            ordenes: Number(r.ordenes ?? r.Ordenes ?? 0),
-            venta: Number(r.totalVentas ?? r.total ?? r.venta ?? 0),
-            promedioTicket: Number(r.promedioTicket ?? r.ticketPromedio ?? 0),
-          }))
-          .sort((a, b) => b.venta - a.venta);
-        
+        const result = items.map((r) => {
+          const totalNeto = Number(r.totalNeto ?? r.TotalNeto ?? r.totalVentas ?? r.total ?? 0);
+          const cantidadTickets = Number(r.cantidadTickets ?? r.CantidadTickets ?? r.ordenes ?? r.Ordenes ?? 0);
+          return {
+            usuarioId: r.usuarioId ?? r.UsuarioId ?? null,
+            vendedor:
+              String(r.nombreCompleto ?? r.NombreCompleto ?? "").trim() ||
+              String(r.nombreUsuario ?? r.NombreUsuario ?? "").trim() ||
+              "Sin vendedor",
+            nombreUsuario: String(r.nombreUsuario ?? r.NombreUsuario ?? "").trim(),
+            rol: String(r.rol ?? r.Rol ?? "—").trim() || "—",
+            cantidadTickets,
+            totalNeto,
+            promedioTicket: Number(r.promedioTicket ?? r.PromedioTicket ?? 0),
+          };
+        });
+        /** El backend ordena por totalNeto descendente; mantenemos orden por si el mock no lo hace. */
+        result.sort((a, b) => b.totalNeto - a.totalNeto);
+
         setRows(result);
-        const tv = Number(data?.totalVentas ?? data?.total ?? result.reduce((s, r) => s + r.venta, 0));
-        const to = Number(data?.totalOrdenes ?? data?.ordenes ?? result.reduce((s, r) => s + r.ordenes, 0));
+        const tv = result.reduce((s, r) => s + r.totalNeto, 0);
+        const to = result.reduce((s, r) => s + r.cantidadTickets, 0);
         setSummary({
           totalVentas: tv,
           totalOrdenes: to,
-          promedioTicket: Number(data?.promedioTicket ?? data?.ticketPromedio) || (to > 0 ? tv / to : 0),
+          promedioTicket: to > 0 ? tv / to : 0,
         });
       } else if (reportId === "categorias") {
-        const data = await backofficeApi.reportesVentasPorCategoria(reportRange);
-        const cats = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+        const data = await backofficeApi.reportesVentasPorCategoriaDesglose(reportRange);
+        const raw = Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : [];
+        const cats = raw.map((r) => ({
+          categoria: String(r.categoria ?? r.Categoria ?? "").trim() || "—",
+          monto: Number(r.monto ?? r.Monto ?? 0),
+          cantidad: Number(r.cantidad ?? r.Cantidad ?? 0),
+          productos: Array.isArray(r.productos ?? r.Productos)
+            ? (r.productos ?? r.Productos).map((p) => ({
+                productoId: p.productoId ?? p.ProductoId ?? null,
+                codigoProducto: String(p.codigoProducto ?? p.CodigoProducto ?? "").trim(),
+                productoNombre: String(p.productoNombre ?? p.ProductoNombre ?? "").trim() || "—",
+                cantidad: Number(p.cantidad ?? p.Cantidad ?? 0),
+                monto: Number(p.monto ?? p.Monto ?? 0),
+              }))
+            : [],
+        }));
+        const totalVentas = cats.reduce((s, r) => s + r.monto, 0);
+        const totalUnidades = cats.reduce((s, r) => s + r.cantidad, 0);
         setRows(cats);
         setSummary({
-          totalVentas: cats.reduce((s, r) => s + Number(r.total || r.venta || 0), 0),
+          totalVentas,
           totalOrdenes: 0,
+          totalCategorias: Number(data?.totalCategorias ?? data?.TotalCategorias ?? cats.length),
+          totalUnidades,
           promedioTicket: 0,
         });
       } else if (reportId === "caja") {
@@ -136,7 +170,12 @@ export function useReports(currencySymbol = "C$") {
         });
       } else if (reportId === "movimientos") {
         const data = await backofficeApi.movimientosProductos(reportRange);
-        setRows(Array.isArray(data?.items) ? data.items : Array.isArray(data) ? data : []);
+        const raw =
+          data?.items ??
+          data?.Items ??
+          data?.movimientos ??
+          (Array.isArray(data) ? data : []);
+        setRows(Array.isArray(raw) ? raw.map(normalizeMovementRow) : []);
         setSummary(null);
       }
     } catch (e) {
@@ -158,16 +197,9 @@ export function useReports(currencySymbol = "C$") {
 
       switch (reportId) {
         case "ventas":
-          const rv = await backofficeApi.reportesResumenVentasDetalle(reportRange);
-          data = rv?.items || [];
-          headers = [
-            { label: "Factura", key: "numeroFactura" },
-            { label: "Fecha", key: "fecha" },
-            { label: "Cajero", key: "cajero" },
-            { label: "Método Pago", key: "metodoPago" },
-            { label: "Total", key: "total" }
-          ];
-          break;
+          await backofficeApi.reportesExportarVentasDetalleExcel(reportRange);
+          snackbar.success("Reporte exportado con éxito.");
+          return;
         case "productos-top":
           data = await backofficeApi.reportesProductosTop({ ...reportRange, top: range.top || 10 });
           headers = [
@@ -177,22 +209,13 @@ export function useReports(currencySymbol = "C$") {
           ];
           break;
         case "vendedores":
-          const rvd = await backofficeApi.reportesVentasPorVendedor(reportRange);
-          data = rvd?.items || [];
-          headers = [
-            { label: "Vendedor", key: "vendedor" },
-            { label: "Órdenes", key: "ordenes" },
-            { label: "Total Venta", key: "totalVentas" }
-          ];
-          break;
+          await backofficeApi.reportesExportarVentasPorVendedorExcel(reportRange);
+          snackbar.success("Reporte exportado con éxito.");
+          return;
         case "categorias":
-          const rc = await backofficeApi.reportesVentasPorCategoria(reportRange);
-          data = rc?.items || [];
-          headers = [
-            { label: "Categoría", key: "nombreCategoria" },
-            { label: "Total Venta", key: "total" }
-          ];
-          break;
+          await backofficeApi.reportesExportarVentasPorCategoriaDesgloseExcel(reportRange);
+          snackbar.success("Reporte exportado con éxito.");
+          return;
         case "caja":
           const rch = await backofficeApi.cajaHistorial({ page: 1, pageSize: 100 });
           data = rch?.items || [];
@@ -229,7 +252,7 @@ export function useReports(currencySymbol = "C$") {
 
   const openOrderDetail = async (order) => {
     const sourceId = Number(order?.sourceId);
-    if (!Number.isFinite(sourceId)) {
+    if (!Number.isFinite(sourceId) || sourceId <= 0) {
       snackbar.error("ID de orden no válido.");
       return;
     }
@@ -237,12 +260,22 @@ export function useReports(currencySymbol = "C$") {
     setDetailLoading(true);
     setDetailOrder(null);
     try {
+      try {
+        const raw = await backofficeApi.reportesVentaTicketDetalle(sourceId);
+        const ticket = normalizeReporteTicketDetalle(raw);
+        if (ticket.items.length > 0 || ticket.totalCobrado > 0 || ticket.subtotalLineas > 0) {
+          setDetailOrder(ticket);
+          return;
+        }
+      } catch {
+        /* fallback: pedido legacy / otra API */
+      }
       const origin = String(order?.origen || "").toLowerCase();
-      const detail =
+      const legacy =
         origin === "delivery"
           ? await backofficeApi.getDeliveryPedido(sourceId)
           : await backofficeApi.getPedido(sourceId);
-      setDetailOrder(detail || null);
+      setDetailOrder(legacy || null);
     } catch (e) {
       snackbar.error(e.message || "Error al cargar detalle.");
       setDetailOpen(false);
@@ -250,6 +283,12 @@ export function useReports(currencySymbol = "C$") {
       setDetailLoading(false);
     }
   };
+
+  const openCategoriaDetail = useCallback((row) => {
+    if (!row) return;
+    setCategoriaDetailRow(row);
+    setCategoriaDetailOpen(true);
+  }, []);
 
   useEffect(() => {
     if (activeReport) loadReportData(activeReport);
@@ -262,6 +301,9 @@ export function useReports(currencySymbol = "C$") {
     loading, exporting, error,
     loadReportData, downloadExcel,
     detailOpen, setDetailOpen,
-    detailLoading, detailOrder, openOrderDetail
+    detailLoading, detailOrder, openOrderDetail,
+    categoriaDetailOpen, setCategoriaDetailOpen,
+    categoriaDetailRow, setCategoriaDetailRow,
+    openCategoriaDetail,
   };
 }
