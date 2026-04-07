@@ -42,6 +42,8 @@ import {
 } from "../utils/posUtils.js";
 import { useOnlineStatus } from "../../../hooks/useOnlineStatus.js";
 import { NETWORK_UI } from "../../../constants/networkUi.js";
+import { useAuth } from "../../../contexts/AuthContext.jsx";
+import { isNormalUser } from "../utils/auth.js";
 
 /**
  * Hook personalizado para manejar la lógica del Punto de Venta (POS).
@@ -49,6 +51,8 @@ import { NETWORK_UI } from "../../../constants/networkUi.js";
 export function usePOS(currencySymbol = "C$") {
   const snackbar = useSnackbar();
   const isOnline = useOnlineStatus();
+  const { user } = useAuth();
+  const omitCajaApi = isNormalUser(user);
 
   const [loading, setLoading] = useState(true);
   const [cajaAbierta, setCajaAbierta] = useState(true);
@@ -90,7 +94,9 @@ export function usePOS(currencySymbol = "C$") {
     setLoading(true);
     try {
       const [caja, catalog, tc] = await Promise.all([
-        backofficeApi.cajaEstado().catch(() => ({ abierta: true })),
+        omitCajaApi
+          ? Promise.resolve({ abierta: true })
+          : backofficeApi.cajaEstado().catch(() => ({ abierta: true })),
         fetchPosProductosYCategorias(backofficeApi, PAGINATION.POS_PRODUCTOS),
         backofficeApi.configuracionTipoCambio().catch(() => ({ valor: 36.8 })),
       ]);
@@ -110,7 +116,7 @@ export function usePOS(currencySymbol = "C$") {
     } finally {
       setLoading(false);
     }
-  }, [snackbar, applyPosCatalogData]);
+  }, [snackbar, applyPosCatalogData, omitCajaApi]);
 
   useEffect(() => {
     loadCatalog();

@@ -6,6 +6,8 @@ import { resolveProductCodigoForSave } from "../utils/productCodigo.js";
 import { parseOpcionesEspecialesFromGruposApi } from "../utils/productoOpcionesEspecialesSync.js";
 import { downloadCSV, INVENTORY_EXPORT_HEADERS } from "../utils/exportUtils.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
+import { useAuth } from "../../../contexts/AuthContext.jsx";
+import { canUseCatalogosApi } from "../utils/auth.js";
 import { PROVIDERS_UPDATED_EVENT } from "../providers/constants.js";
 import {
   tieneControlStock,
@@ -14,6 +16,7 @@ import {
   fetchAllProductPages,
   normalizeInventoryCategoryFilterId,
   consumePendingInventoryCategory,
+  buildCategoriesFromProducts,
 } from "../utils/inventoryUtils.js";
 
 /** 
@@ -22,6 +25,8 @@ import {
  */
 export function useInventory(currencySymbol = "C$") {
   const snackbar = useSnackbar();
+  const { user } = useAuth();
+  const catalogosApiEnabled = canUseCatalogosApi(user);
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [providers, setProviders] = useState([]);
@@ -164,21 +169,50 @@ export function useInventory(currencySymbol = "C$") {
     const initialCategoria = pending === null ? "" : pending;
     setSelectedCategory(initialCategoria);
     setLoading(true);
-    Promise.all([
-      loadProducts({ page: 1, categoriaId: initialCategoria }),
-      backofficeApi.catalogoCategoriasProducto(),
-      backofficeApi.catalogoProveedores()
-    ])
-      .then(([, cat, prov]) => {
+
+    (async () => {
+      try {
+        const data = await backofficeApi.listProductos({
+          page: 1,
+          pageSize: PAGINATION.PRODUCTOS_PAGE_SIZE,
+          search: undefined,
+          categoriaId: initialCategoria || undefined,
+        });
         if (!mounted) return;
-        setCategories(Array.isArray(cat) ? cat : cat?.items || []);
-        setProviders(Array.isArray(prov) ? prov : prov?.items || []);
-      })
-      .catch((e) => mounted && setError(e.message || "No se pudo cargar la información inicial."))
-      .finally(() => mounted && setLoading(false));
-    
-    return () => { mounted = false; };
-  }, []); // Solo al montar
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setProducts(items);
+        setListMeta({
+          page: data.page ?? 1,
+          pageSize: data.pageSize ?? PAGINATION.PRODUCTOS_PAGE_SIZE,
+          totalCount: data.totalCount ?? null,
+          totalPages: data.totalPages ?? 1,
+          totalCountFromServer: Boolean(data.totalCountFromServer),
+        });
+
+        if (catalogosApiEnabled) {
+          const [cat, prov] = await Promise.all([
+            backofficeApi.catalogoCategoriasProducto(),
+            backofficeApi.catalogoProveedores(),
+          ]);
+          if (!mounted) return;
+          setCategories(Array.isArray(cat) ? cat : cat?.items || []);
+          setProviders(Array.isArray(prov) ? prov : prov?.items || []);
+        } else {
+          setCategories(buildCategoriesFromProducts(items));
+          setProviders([]);
+        }
+        setError("");
+      } catch (e) {
+        if (mounted) setError(e.message || "No se pudo cargar la información inicial.");
+      } finally {
+        if (mounted) setLoading(false);
+      }
+    })();
+
+    return () => {
+      mounted = false;
+    };
+  }, [catalogosApiEnabled]);
 
   const searchDebounceSkip = useRef(true);
   useEffect(() => {
@@ -194,24 +228,31 @@ export function useInventory(currencySymbol = "C$") {
 
   // Escuchar actualizaciones de proveedores
   useEffect(() => {
+    if (!catalogosApiEnabled) return undefined;
     const onProvidersUpdated = async () => {
       try {
         const prov = await backofficeApi.catalogoProveedores();
         setProviders(Array.isArray(prov) ? prov : prov?.items || []);
-      } catch { /* Fail silently */ }
+      } catch {
+        /* Fail silently */
+      }
     };
     window.addEventListener(PROVIDERS_UPDATED_EVENT, onProvidersUpdated);
     return () => window.removeEventListener(PROVIDERS_UPDATED_EVENT, onProvidersUpdated);
-  }, []);
+  }, [catalogosApiEnabled]);
 
   const reloadCategoriesOnly = useCallback(async () => {
+    if (!catalogosApiEnabled) {
+      setCategories(buildCategoriesFromProducts(products));
+      return;
+    }
     try {
       const cat = await backofficeApi.catalogoCategoriasProducto();
       setCategories(Array.isArray(cat) ? cat : cat?.items || []);
     } catch (e) {
       snackbar.error(e.message || "No se pudo actualizar categorías.");
     }
-  }, [snackbar]);
+  }, [snackbar, catalogosApiEnabled, products]);
 
   /** Lista paginada por el API; nombres de categoría para la UI y exportación. */
   const filteredProducts = useMemo(

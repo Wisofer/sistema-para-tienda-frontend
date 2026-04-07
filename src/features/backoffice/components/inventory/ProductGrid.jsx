@@ -11,6 +11,7 @@ export function ProductGrid({
   openProductHistory,
   setConfirmAction,
   gridColumns = 5,
+  readOnly = false,
 }) {
   if (products.length === 0) {
     return (
@@ -37,6 +38,7 @@ export function ProductGrid({
           openEdit={openEdit}
           openProductHistory={openProductHistory}
           setConfirmAction={setConfirmAction}
+          readOnly={readOnly}
         />
       ))}
     </div>

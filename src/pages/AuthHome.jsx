@@ -9,7 +9,12 @@ import { setPendingInventoryCategory } from "../features/backoffice/utils/invent
 import { POS_INVENTORY_UPDATED_EVENT } from "../features/backoffice/constants/posEvents.js";
 import { DEFAULT_TIPO_CAMBIO_USD, resolveCurrencySymbol } from "../features/backoffice/utils/currency.js";
 import { pickPortalTagline } from "../features/backoffice/utils/portalConfig.js";
-import { canAccessView, getAllowedViewIds } from "../features/backoffice/utils/auth.js";
+import {
+  canAccessView,
+  canUseConfiguracionesCompletas,
+  canUseDashboardApi,
+  getAllowedViewIds,
+} from "../features/backoffice/utils/auth.js";
 import { displayUserName } from "../utils/authUser.js";
 import {
   CashierView,
@@ -98,21 +103,32 @@ export function AuthHome() {
 
   useEffect(() => {
     let mounted = true;
-    Promise.all([backofficeApi.configuraciones(), backofficeApi.configuracionTipoCambio().catch(() => null)])
-      .then(([data, tc]) => {
+    (async () => {
+      try {
+        const tc = await backofficeApi.configuracionTipoCambio().catch(() => null);
         if (!mounted) return;
-        const list = Array.isArray(data) ? data : data?.items || [];
-        setCurrencySymbol(resolveCurrencySymbol(list));
-        setPortalTagline(pickPortalTagline(list));
         const tcValue = Number(tc?.tipoCambioDolar ?? tc?.TipoCambioDolar ?? tc?.valor ?? 0);
         if (Number.isFinite(tcValue) && tcValue > 0) setTipoCambio(tcValue);
         else setTipoCambio(DEFAULT_TIPO_CAMBIO_USD);
-      })
-      .catch(() => {});
+
+        if (canUseConfiguracionesCompletas(user)) {
+          const data = await backofficeApi.configuraciones();
+          if (!mounted) return;
+          const list = Array.isArray(data) ? data : data?.items || [];
+          setCurrencySymbol(resolveCurrencySymbol(list));
+          setPortalTagline(pickPortalTagline(list));
+        } else {
+          setCurrencySymbol("C$");
+          setPortalTagline("");
+        }
+      } catch {
+        if (mounted) setTipoCambio(DEFAULT_TIPO_CAMBIO_USD);
+      }
+    })();
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [user]);
 
   const toggleSidebar = () => {
     const next = !sidebarCollapsed;
@@ -143,25 +159,41 @@ export function AuthHome() {
 
   const refreshLowStock = useCallback(async () => {
     try {
-      const [dashboard, productosRes] = await Promise.all([
-        backofficeApi.dashboardResumen({ topProductos: 3 }),
-        backofficeApi.listProductos({ page: 1, pageSize: PAGINATION.CATALOG_ALERTS, activos: true }),
-      ]);
-      let list = extractDashboardLowStockList(dashboard);
-      if (list.length === 0) {
+      let list = [];
+      if (canUseDashboardApi(user)) {
+        const [dashboard, productosRes] = await Promise.all([
+          backofficeApi.dashboardResumen({ topProductos: 3 }),
+          backofficeApi.listProductos({ page: 1, pageSize: PAGINATION.CATALOG_ALERTS, activos: true }),
+        ]);
+        list = extractDashboardLowStockList(dashboard);
+        if (list.length === 0) {
+          const rawItems = productosRes?.items ?? productosRes?.Items ?? [];
+          list = lowStockFromProductosCatalog(rawItems).map((p) => ({
+            id: p.id,
+            nombre: p.nombre,
+            stock: p.stock,
+            stockMinimo: p.stockMinimo,
+          }));
+        } else {
+          list = list.map((p) => ({
+            id: p.id ?? p.Id,
+            nombre: p.nombre ?? p.Nombre ?? "Producto",
+            stock: p.stock ?? p.Stock ?? 0,
+            stockMinimo: p.stockMinimo ?? p.StockMinimo ?? 0,
+          }));
+        }
+      } else {
+        const productosRes = await backofficeApi.listProductos({
+          page: 1,
+          pageSize: PAGINATION.CATALOG_ALERTS,
+          activos: true,
+        });
         const rawItems = productosRes?.items ?? productosRes?.Items ?? [];
         list = lowStockFromProductosCatalog(rawItems).map((p) => ({
           id: p.id,
           nombre: p.nombre,
           stock: p.stock,
           stockMinimo: p.stockMinimo,
-        }));
-      } else {
-        list = list.map((p) => ({
-          id: p.id ?? p.Id,
-          nombre: p.nombre ?? p.Nombre ?? "Producto",
-          stock: p.stock ?? p.Stock ?? 0,
-          stockMinimo: p.stockMinimo ?? p.StockMinimo ?? 0,
         }));
       }
       setLowStockItems(list);
@@ -186,7 +218,7 @@ export function AuthHome() {
       lowStockSigRef.current = null;
       setLowStockItems([]);
     }
-  }, [snackbar]);
+  }, [snackbar, user]);
 
   useEffect(() => {
     void refreshLowStock();

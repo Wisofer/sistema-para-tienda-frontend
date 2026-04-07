@@ -11,6 +11,7 @@ export function ProductCard({
   openEdit,
   openProductHistory,
   setConfirmAction,
+  readOnly = false,
 }) {
   const p = product;
   const stock = Number(p.stock || 0);
@@ -90,39 +91,41 @@ export function ProductCard({
           >
             {p.controlarStock ? `Stock: ${stock}` : "Sin control"}
           </p>
-          <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-            <button
-              type="button"
-              onClick={() => openEdit(p.id)}
-              className="p-1 text-slate-400 transition-colors hover:text-blue-500"
-              title="Editar"
-            >
-              <Pencil className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => openProductHistory(p)}
-              className="p-1 text-slate-400 transition-colors hover:text-indigo-500"
-              title="Historial"
-            >
-              <History className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() =>
-                setConfirmAction({
-                  open: true,
-                  type: "product",
-                  id: p.id,
-                  name: p.nombre || "Producto",
-                })
-              }
-              className="p-1 text-slate-400 transition-colors hover:text-red-500"
-              title="Eliminar"
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
-          </div>
+          {!readOnly && (
+            <div className="flex shrink-0 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+              <button
+                type="button"
+                onClick={() => openEdit(p.id)}
+                className="p-1 text-slate-400 transition-colors hover:text-blue-500"
+                title="Editar"
+              >
+                <Pencil className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => openProductHistory(p)}
+                className="p-1 text-slate-400 transition-colors hover:text-indigo-500"
+                title="Historial"
+              >
+                <History className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setConfirmAction({
+                    open: true,
+                    type: "product",
+                    id: p.id,
+                    name: p.nombre || "Producto",
+                  })
+                }
+                className="p-1 text-slate-400 transition-colors hover:text-red-500"
+                title="Eliminar"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </article>

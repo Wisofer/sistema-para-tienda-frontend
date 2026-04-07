@@ -6,6 +6,17 @@ import { BackofficeDialog, BackofficeListSkeletonLoading, BackofficePageShell } 
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
 
+/** Valores del claim `Rol` en el JWT (alineado con políticas del API). */
+const ROLES_SISTEMA = [
+  { value: "Administrador", label: "Administrador" },
+  { value: "Cajero", label: "Cajero" },
+  { value: "Normal", label: "Normal (ventas / POS)" },
+];
+
+function rolEsConocido(rol) {
+  return ROLES_SISTEMA.some((r) => r.value === rol);
+}
+
 export function UsersView() {
   const snackbar = useSnackbar();
   const [users, setUsers] = useState([]);
@@ -22,7 +33,7 @@ export function UsersView() {
     id: null,
     nombreUsuario: "",
     nombreCompleto: "",
-    rol: "Mesero",
+    rol: "Normal",
     contrasena: "",
     activo: true,
   });
@@ -53,7 +64,7 @@ export function UsersView() {
   }, []);
 
   const openCreate = () => {
-    setForm({ id: null, nombreUsuario: "", nombreCompleto: "", rol: "Mesero", contrasena: "", activo: true });
+    setForm({ id: null, nombreUsuario: "", nombreCompleto: "", rol: "Normal", contrasena: "", activo: true });
     setModalOpen(true);
   };
 
@@ -62,7 +73,7 @@ export function UsersView() {
       id: u.id,
       nombreUsuario: u.nombreUsuario || "",
       nombreCompleto: u.nombreCompleto || "",
-      rol: u.rol || "Mesero",
+      rol: u.rol || "Normal",
       contrasena: "",
       activo: u.activo !== false,
     });
@@ -142,11 +153,11 @@ export function UsersView() {
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar usuario" className="rounded-lg border border-slate-300 px-3 py-2 text-sm" />
           <select value={rol} onChange={(e) => setRol(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
             <option value="">Todos los roles</option>
-            <option value="Administrador">Administrador</option>
-            <option value="Mesero">Mesero</option>
-            <option value="Cajero">Cajero</option>
-            <option value="Cocinero">Cocinero</option>
-            <option value="Bartender">Bartender</option>
+            {ROLES_SISTEMA.map((r) => (
+              <option key={r.value} value={r.value}>
+                {r.label}
+              </option>
+            ))}
           </select>
           <select value={activo} onChange={(e) => setActivo(e.target.value)} className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
             <option value="">Todos</option>
@@ -203,11 +214,14 @@ export function UsersView() {
               <input value={form.nombreUsuario} onChange={(e) => setForm((f) => ({ ...f, nombreUsuario: e.target.value }))} placeholder="Nombre de usuario" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required />
               <input value={form.nombreCompleto} onChange={(e) => setForm((f) => ({ ...f, nombreCompleto: e.target.value }))} placeholder="Nombre completo" className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" />
               <select value={form.rol} onChange={(e) => setForm((f) => ({ ...f, rol: e.target.value }))} className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm" required>
-                <option value="Administrador">Administrador</option>
-                <option value="Mesero">Mesero</option>
-                <option value="Cajero">Cajero</option>
-                <option value="Cocinero">Cocinero</option>
-                <option value="Bartender">Bartender</option>
+                {ROLES_SISTEMA.map((r) => (
+                  <option key={r.value} value={r.value}>
+                    {r.label}
+                  </option>
+                ))}
+                {form.rol && !rolEsConocido(form.rol) ? (
+                  <option value={form.rol}>{form.rol} (rol en base de datos)</option>
+                ) : null}
               </select>
               <input
                 type="password"

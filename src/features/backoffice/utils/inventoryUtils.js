@@ -22,13 +22,39 @@ export function enrichProductsWithCategoryNames(products, categories) {
   const cats = Array.isArray(categories) ? categories : [];
   return list.map((p) => {
     if (p?.categoriaNombre) return p;
-    const cid = p.categoriaProductoId;
+    const cid = p.categoriaProductoId ?? p.CategoriaProductoId ?? p.categoriaId ?? p.CategoriaId;
     const cat = cats.find((c) => String(c.id) === String(cid));
     return {
       ...p,
       categoriaNombre: cat?.nombre || cat?.Nombre || "",
     };
   });
+}
+
+/**
+ * Categorías derivadas del listado de productos (rol Normal: sin GET /catalogos).
+ */
+export function buildCategoriesFromProducts(products) {
+  const map = new Map();
+  for (const p of Array.isArray(products) ? products : []) {
+    const id = p.categoriaProductoId ?? p.CategoriaProductoId ?? p.categoriaId ?? p.categoria?.id ?? p.Categoria?.Id;
+    const nombre =
+      p.categoriaNombre ??
+      p.CategoriaNombre ??
+      p.categoria?.nombre ??
+      p.Categoria?.Nombre;
+    if (id == null && (nombre == null || String(nombre).trim() === "")) continue;
+    const key = id != null ? String(id) : String(nombre).trim();
+    if (map.has(key)) continue;
+    map.set(key, {
+      id: id ?? key,
+      nombre:
+        nombre != null && String(nombre).trim() !== ""
+          ? String(nombre).trim()
+          : "Sin categoría",
+    });
+  }
+  return Array.from(map.values()).sort((a, b) => String(a.nombre).localeCompare(String(b.nombre), "es"));
 }
 
 /** 

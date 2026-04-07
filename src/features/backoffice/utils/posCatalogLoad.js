@@ -1,21 +1,27 @@
+import { buildCategoriesFromProducts } from "./inventoryUtils.js";
+
 /**
  * Catálogo POS con opciones (productos activos + categorías).
+ * Si GET /catalogos/categorias-producto no está permitido (403), las categorías se derivan de los productos.
  * @param {object} api — típicamente `backofficeApi`
  * @param {number} pageSize — ej. `PAGINATION.POS_PRODUCTOS`
  */
 export async function fetchPosProductosYCategorias(api, pageSize) {
-  const [productsData, categoriesData] = await Promise.all([
-    api.listProductos({
-      page: 1,
-      pageSize,
-      activos: true,
-      incluirOpciones: true,
-      incluirVariantes: true,
-    }),
-    api.catalogoCategoriasProducto(),
-  ]);
+  const productsData = await api.listProductos({
+    page: 1,
+    pageSize,
+    activos: true,
+    incluirOpciones: true,
+    incluirVariantes: true,
+  });
   const products = Array.isArray(productsData?.items) ? productsData.items : [];
-  const categories = Array.isArray(categoriesData) ? categoriesData : categoriesData?.items || [];
+  let categories = [];
+  try {
+    const categoriesData = await api.catalogoCategoriasProducto();
+    categories = Array.isArray(categoriesData) ? categoriesData : categoriesData?.items || [];
+  } catch {
+    categories = buildCategoriesFromProducts(products);
+  }
   return { products, categories };
 }
 

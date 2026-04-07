@@ -1,11 +1,21 @@
 import { LogOut, Menu, X } from "lucide-react";
 import { APP_NAME } from "../../../config/brand.js";
 import { NAV_ITEMS } from "../constants.js";
+import { cn } from "../../../utils/cn.js";
 
-const QUICK_NAV_IDS = ["dashboard", "products", "pos", "cashier"];
+/** Atajos inferiores: solo vistas permitidas para el rol (p. ej. Normal sin dashboard/caja). */
+const QUICK_BASE = ["dashboard", "products", "pos", "cashier", "clients"];
 
 export function MobileNav({ open, setOpen, activeView, onChangeView, onLogout, sessionLoading, navItems = NAV_ITEMS, topBarEnd = null }) {
-  const quickNavItems = navItems.filter((item) => QUICK_NAV_IDS.includes(item.id));
+  const quickNavItems = navItems.filter((item) => QUICK_BASE.includes(item.id));
+  const quickCols =
+    quickNavItems.length <= 1
+      ? "grid-cols-1"
+      : quickNavItems.length === 2
+        ? "grid-cols-2"
+        : quickNavItems.length === 3
+          ? "grid-cols-3"
+          : "grid-cols-4";
 
   return (
     <>
@@ -80,7 +90,7 @@ export function MobileNav({ open, setOpen, activeView, onChangeView, onLogout, s
       </aside>
 
       <nav className="fixed inset-x-3 bottom-3 z-40 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-lg backdrop-blur supports-[backdrop-filter]:bg-white/80 lg:hidden">
-        <ul className="grid grid-cols-4 gap-1">
+        <ul className={cn("grid gap-1", quickCols)}>
           {quickNavItems.map((item) => {
             const active = activeView === item.id;
             return (

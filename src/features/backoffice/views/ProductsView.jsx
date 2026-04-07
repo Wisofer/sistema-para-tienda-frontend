@@ -2,6 +2,8 @@ import React from "react";
 import { BackofficePageShell, BackofficeStatCardsListSkeleton } from "../components/index.js";
 import { ConfirmModal } from "../../../components/ui/ConfirmModal.jsx";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
+import { useAuth } from "../../../contexts/AuthContext.jsx";
+import { isNormalUser } from "../utils/auth.js";
 import { CategoriesView } from "./CategoriesView.jsx";
 import { normalizeInventoryCategoryFilterId } from "../utils/inventoryUtils.js";
 
@@ -28,6 +30,8 @@ import {
  */
 export function ProductsView({ currencySymbol = "C$" }) {
   const snackbar = useSnackbar();
+  const { user } = useAuth();
+  const inventoryReadOnly = isNormalUser(user);
   const {
     categories,
     providers,
@@ -134,6 +138,7 @@ export function ProductsView({ currencySymbol = "C$" }) {
         saving={saving}
         gridColumns={gridColumns}
         setGridColumns={setGridColumns}
+        readOnly={inventoryReadOnly}
       />
 
       {/* 2. Listado de Productos (Cuadrícula) */}
@@ -145,6 +150,7 @@ export function ProductsView({ currencySymbol = "C$" }) {
           openProductHistory={openProductHistory}
           setConfirmAction={setConfirmAction}
           gridColumns={gridColumns}
+          readOnly={inventoryReadOnly}
         />
       </div>
 

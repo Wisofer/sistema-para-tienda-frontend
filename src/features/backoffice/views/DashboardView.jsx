@@ -1,12 +1,27 @@
 import { CircleDollarSign, ClipboardList, Clock3, ShoppingBag, Sparkles, BarChart3 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Legend,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 import { backofficeApi } from "../services/backofficeApi.js";
 import { BackofficePageShell, BackofficeStatCardsListSkeleton } from "../components/index.js";
 import { formatCurrency } from "../utils/currency.js";
 
 const icons = [ClipboardList, BarChart3, CircleDollarSign, Clock3];
 const TOP_PRODUCTS_LIMIT = 3;
+
+/** Tonos verde / esmeralda para porciones del pastel (ingresos por mes). */
+const PIE_COLORS = ["#047857", "#059669", "#10b981", "#34d399", "#6ee7b7", "#14b8a6", "#0d9488", "#065f46"];
 
 /** Debe coincidir con `title` en `setStats` para el bloque «Resumen del día». */
 const RESUMEN_DIA_KEYS = ["Ventas de Hoy", "Ingresos (C$)", "Ticket Promedio", "Ventas del Mes"];
@@ -297,37 +312,112 @@ export function DashboardView({ currencySymbol = "C$" }) {
           </article>
         </div>
 
-        <article className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-800">Ingresos mensuales</h2>
-            <Clock3 className="h-5 w-5 text-slate-400" />
-          </div>
-          <div className="mt-3 h-56 min-w-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-50 p-2 sm:h-60">
-            {salesSeries.length === 0 ? (
-              <div className="flex h-full items-center justify-center text-xs text-slate-500">Sin datos de ingresos mensuales.</div>
-            ) : (
-              <ResponsiveContainer className="min-w-0 w-full" width="100%" height="100%">
-                <BarChart data={salesSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#16a34a" stopOpacity={0.35} />
-                      <stop offset="95%" stopColor="#16a34a" stopOpacity={0.02} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-                  <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} width={40} />
-                  <Tooltip
-                    formatter={(value) => formatCurrency(Number(value || 0), currencySymbol)}
-                    contentStyle={{ borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}
-                  />
-                  <Bar dataKey="total" fill="#16a34a" radius={[5, 5, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            )}
-          </div>
-          <p className="mt-2 text-xs text-slate-500">Rango: {rangeLabel}</p>
-        </article>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
+          <article className="flex flex-col rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div>
+              <div className="flex items-start justify-between gap-2">
+                <h2 className="text-base font-semibold text-slate-800">Ingresos mensuales</h2>
+                <Clock3 className="h-5 w-5 shrink-0 text-slate-400" />
+              </div>
+              <p className="mt-1 text-xs text-slate-500">Mes actual (KPI principal)</p>
+              <p className="mt-3 text-3xl font-bold tabular-nums tracking-tight text-slate-900 sm:text-4xl">
+                {formatCurrency(monthRevenue, currencySymbol)}
+              </p>
+            </div>
+            <div className="mt-6 space-y-3 border-t border-slate-100 pt-4">
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-slate-500">Total histórico en gráfico</span>
+                <span className="font-semibold tabular-nums text-slate-900">
+                  {formatCurrency(totalIncomeSinceStart, currencySymbol)}
+                </span>
+              </div>
+              <div className="flex items-center justify-between gap-3 text-sm">
+                <span className="text-slate-500">Semana</span>
+                <span className="font-semibold tabular-nums text-slate-900">
+                  {formatCurrency(weekRevenue, currencySymbol)}
+                </span>
+              </div>
+              <p className="text-xs leading-relaxed text-slate-500">
+                Rango de la serie: <span className="font-medium text-slate-600">{rangeLabel}</span>
+              </p>
+            </div>
+
+            <div className="mt-6 border-t border-slate-100 pt-4">
+              <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-500">Distribución por mes</p>
+              <div className="h-[200px] w-full min-w-0 overflow-hidden rounded-lg border border-slate-100 bg-slate-50/80 p-1">
+                {salesSeries.length === 0 ? (
+                  <div className="flex h-full items-center justify-center text-[11px] text-slate-500">
+                    Sin datos para el gráfico.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart margin={{ top: 0, right: 4, left: 4, bottom: 0 }}>
+                      <Pie
+                        data={salesSeries}
+                        dataKey="total"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius="38%"
+                        outerRadius="70%"
+                        paddingAngle={2}
+                        stroke="#fff"
+                        strokeWidth={2}
+                      >
+                        {salesSeries.map((_, index) => (
+                          <Cell key={`slice-${salesSeries[index]?.key ?? index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => formatCurrency(Number(value || 0), currencySymbol)}
+                        contentStyle={{ borderRadius: "0.5rem", border: "1px solid #e2e8f0", fontSize: "12px" }}
+                      />
+                      <Legend
+                        verticalAlign="bottom"
+                        height={28}
+                        wrapperStyle={{ fontSize: "10px" }}
+                        formatter={(value) => value}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                )}
+              </div>
+            </div>
+          </article>
+
+          <article className="flex min-h-[260px] flex-col overflow-hidden rounded-xl border border-slate-200 bg-gradient-to-br from-emerald-50/80 via-white to-slate-50 p-4 shadow-sm sm:min-h-[280px] lg:min-h-0">
+            <div className="mb-2 flex shrink-0 items-center justify-between">
+              <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Evolución por mes</p>
+            </div>
+            <div className="h-56 min-h-[200px] flex-1 overflow-hidden rounded-lg border border-white/60 bg-white/50 p-2 shadow-inner backdrop-blur-[2px] sm:h-60">
+              {salesSeries.length === 0 ? (
+                <div className="flex h-full items-center justify-center text-xs text-slate-500">
+                  Sin datos de ingresos mensuales.
+                </div>
+              ) : (
+                <ResponsiveContainer className="min-w-0" width="100%" height="100%">
+                  <BarChart data={salesSeries} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#16a34a" stopOpacity={0.45} />
+                        <stop offset="95%" stopColor="#16a34a" stopOpacity={0.06} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} />
+                    <YAxis tick={{ fontSize: 11, fill: "#64748b" }} axisLine={false} tickLine={false} width={40} />
+                    <Tooltip
+                      formatter={(value) => formatCurrency(Number(value || 0), currencySymbol)}
+                      contentStyle={{ borderRadius: "0.5rem", border: "1px solid #e2e8f0" }}
+                    />
+                    <Bar dataKey="total" fill="url(#salesFill)" radius={[5, 5, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
+            </div>
+            <p className="mt-2 shrink-0 text-xs text-slate-500">Rango: {rangeLabel}</p>
+          </article>
+        </div>
       </div>
     </BackofficePageShell>
   );
