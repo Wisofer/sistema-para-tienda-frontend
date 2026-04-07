@@ -3,8 +3,11 @@ import { APP_NAME } from "../../../config/brand.js";
 import { NAV_ITEMS } from "../constants.js";
 import { cn } from "../../../utils/cn.js";
 
-/** Atajos inferiores: solo vistas permitidas para el rol (p. ej. Normal sin dashboard/caja). */
-const QUICK_BASE = ["dashboard", "products", "pos", "cashier", "clients"];
+/**
+ * Barra inferior (solo móvil): sin «Caja» para evitar 5 íconos en dos filas.
+ * Caja sigue disponible en el menú lateral (hamburguesa).
+ */
+const QUICK_BASE = ["dashboard", "products", "pos", "clients"];
 
 export function MobileNav({ open, setOpen, activeView, onChangeView, onLogout, sessionLoading, navItems = NAV_ITEMS, topBarEnd = null }) {
   const quickNavItems = navItems.filter((item) => QUICK_BASE.includes(item.id));
