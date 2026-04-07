@@ -97,6 +97,26 @@ export function ReportFilters({
           </div>
         )}
 
+        {activeReport === "ventas" && (
+          <div>
+            <label className="mb-1 block text-xs font-medium text-slate-600">
+              Tickets
+            </label>
+            <select
+              value={range.filtroVentas ?? "activas"}
+              onChange={(e) =>
+                setRange((r) => ({ ...r, filtroVentas: e.target.value || "activas" }))
+              }
+              className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-primary-500 focus:outline-none"
+              aria-label="Filtrar ventas por estado"
+            >
+              <option value="activas">Solo cobradas</option>
+              <option value="anuladas">Solo anuladas</option>
+              <option value="todas">Cobradas y anuladas</option>
+            </select>
+          </div>
+        )}
+
         <div className="flex gap-2 md:col-span-2">
           <button
             type="button"

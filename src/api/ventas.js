@@ -29,4 +29,18 @@ export const ventasApi = {
 
   /** PDF del ticket (GET autenticado). */
   ticketPdf: (id) => fetchBlob(`${base}/${encodeURIComponent(String(id))}/ticket`),
+
+  /**
+   * Anula una venta cobrada (Admin + código `CodigoCancelacionVenta`).
+   * @param {string|number} id
+   * @param {{ codigo: string, motivo?: string }} body
+   */
+  cancelar: (id, body) => api.post(`${base}/${encodeURIComponent(String(id))}/cancelar`, body),
+
+  /**
+   * Devolución parcial por líneas de detalle.
+   * @param {string|number} id
+   * @param {{ codigo: string, detalleIds: number[], motivo?: string }} body
+   */
+  cancelarParcial: (id, body) => api.post(`${base}/${encodeURIComponent(String(id))}/cancelar-parcial`, body),
 };

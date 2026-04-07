@@ -1,4 +1,5 @@
-import { api, fetchBlob } from "./client.js";
+import { api, fetchExportBlob } from "./client.js";
+import { downloadBlobAsFile } from "./downloadUtils.js";
 import { getApiUrl } from "./config.js";
 
 const base = "/api/v1/productos";
@@ -297,10 +298,10 @@ export function fromBackendProduct(p) {
  * - POST /entrada | /salida | /ajuste
  */
 export const productsApi = {
-  list: async (params) => {
+  list: async (params, fetchOpts = {}) => {
     const p = { ...(params || {}) };
     if (p.pageSize != null) p.pageSize = clampPageSize(p.pageSize);
-    const raw = await api.get(`${base}${qs(p)}`);
+    const raw = await api.get(`${base}${qs(p)}`, fetchOpts);
     return normalizeProductListResponse(raw, p);
   },
   get: async (id) => fromBackendProduct(await api.get(`${base}/${id}`)),
@@ -324,13 +325,8 @@ export const productsApi = {
     delete p.page;
     delete p.pageSize;
     const q = qs(p);
-    const blob = await fetchBlob(`${inventarioBase}/movimientos/exportar${q}`);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `movimientos_inventario_${new Date().toISOString().slice(0, 10)}.xlsx`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const blob = await fetchExportBlob(`${inventarioBase}/movimientos/exportar${q}`);
+    downloadBlobAsFile(blob, `movimientos_inventario_${new Date().toISOString().slice(0, 10)}.xlsx`);
   },
   /** Entrada de stock (Admin). Cuerpo: productoId, productoVarianteId?, cantidad, costoUnitario, proveedorId?, numeroReferencia?, observaciones? */
   entradaStock: (body) => {

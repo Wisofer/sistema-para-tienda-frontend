@@ -148,15 +148,17 @@ export function ProductsView({ currencySymbol = "C$" }) {
         />
       </div>
 
-      <InventoryListFooter
-        page={listMeta.page}
-        pageSize={listMeta.pageSize}
-        totalPages={listMeta.totalPages}
-        totalCount={listMeta.totalCount}
-        itemsOnPage={filteredProducts.length}
-        onPageChange={handleInventoryPageChange}
-        loading={inventoryPageLoading}
-      />
+      {filteredProducts.length > 0 && (
+        <InventoryListFooter
+          page={listMeta.page}
+          pageSize={listMeta.pageSize}
+          totalPages={listMeta.totalPages}
+          totalCount={listMeta.totalCount}
+          itemsOnPage={filteredProducts.length}
+          onPageChange={handleInventoryPageChange}
+          loading={inventoryPageLoading}
+        />
+      )}
 
       {/* --- MODALES --- */}
 

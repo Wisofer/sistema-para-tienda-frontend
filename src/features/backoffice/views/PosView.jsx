@@ -19,6 +19,7 @@ import { PosMobileNav } from "../components/pos/PosMobileNav.jsx";
 export function PosView({ currencySymbol = "C$" }) {
   const {
     loading,
+    catalogSearchLoading,
     categories,
     selectedCategory,
     setSelectedCategory,
@@ -72,7 +73,7 @@ export function PosView({ currencySymbol = "C$" }) {
         <div className="flex-1 content-start gap-4 overflow-y-auto p-4 scrollbar-hide">
           <PosCatalog
             products={filteredProducts}
-            catalogLoading={loading}
+            catalogLoading={loading || catalogSearchLoading}
             currencySymbol={currencySymbol}
             addToCart={addToCart}
             cajaAbierta={cajaAbierta}

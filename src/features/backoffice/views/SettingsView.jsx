@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { MessageSquareText, Pencil, Settings2, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { backofficeApi } from "../services/backofficeApi.js";
 import { BackofficeDialog, BackofficeListSkeletonLoading, BackofficePageShell } from "../components/index.js";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
@@ -10,11 +10,9 @@ export function SettingsView() {
   const { user } = useAuth();
   const snackbar = useSnackbar();
   const [settings, setSettings] = useState([]);
-  const [tipoCambio, setTipoCambio] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
-  const [tipoCambioInput, setTipoCambioInput] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [configForm, setConfigForm] = useState({ clave: "", valor: "", descripcion: "" });
   const [templates, setTemplates] = useState([]);
@@ -32,16 +30,12 @@ export function SettingsView() {
   const [confirmDeleteTemplate, setConfirmDeleteTemplate] = useState({ open: false, id: null });
 
   const loadAll = async () => {
-    const [config, tc, tmpl] = await Promise.all([
+    const [config, tmpl] = await Promise.all([
       backofficeApi.configuraciones(),
-      backofficeApi.configuracionTipoCambio(),
       backofficeApi.listPlantillasWhatsapp(templatesActivas === "" ? {} : { activas: templatesActivas }),
     ]);
     const list = Array.isArray(config) ? config : config?.items || [];
     setSettings(list);
-    const tcValue = tc?.tipoCambioDolar ?? tc?.TipoCambioDolar ?? tc?.valor ?? null;
-    setTipoCambio(tcValue);
-    setTipoCambioInput(tcValue ?? "");
     setTemplates(Array.isArray(tmpl) ? tmpl : tmpl?.items || []);
   };
 
@@ -60,20 +54,6 @@ export function SettingsView() {
     setTemplates(Array.isArray(data) ? data : data?.items || []);
   };
 
-  const saveTipoCambio = async () => {
-    setSaving(true);
-    setError("");
-    try {
-      await backofficeApi.updateTipoCambio(Number(tipoCambioInput));
-      await loadAll();
-      snackbar.success("Tipo de cambio actualizado.");
-    } catch (e) {
-      snackbar.error(e.message || "No se pudo actualizar tipo de cambio.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
   const openConfigEditor = (cfg) => {
     setConfigForm({
       clave: cfg?.clave || "",
@@ -89,6 +69,13 @@ export function SettingsView() {
     setError("");
     try {
       await backofficeApi.upsertConfiguracion(configForm.clave, configForm.valor, configForm.descripcion);
+      const claveNorm = String(configForm.clave || "").trim().toLowerCase();
+      if (claveNorm === "tipocambiodolar") {
+        const n = Number(String(configForm.valor).replace(",", "."));
+        if (Number.isFinite(n) && n > 0) {
+          await backofficeApi.updateTipoCambio(n).catch(() => {});
+        }
+      }
       await loadAll();
       setModalOpen(false);
       snackbar.success("Configuración guardada.");
@@ -206,8 +193,7 @@ export function SettingsView() {
         {/* Lado Izquierdo: General y POS */}
         <div className="space-y-8 md:col-span-12 lg:col-span-7">
           
-          {/* Perfil y Tipo de Cambio Integrados */}
-          <section className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <section className="grid grid-cols-1 gap-4">
             <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
@@ -216,27 +202,6 @@ export function SettingsView() {
                 <div>
                   <h3 className="text-sm font-bold text-slate-800">{user?.nombreUsuario || user?.usuario || "Usuario"}</h3>
                   <p className="text-xs text-slate-500">{user?.rol || "Admin"}</p>
-                </div>
-              </div>
-            </article>
-
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800">Tipo de cambio</h3>
-                  <p className="text-[10px] text-slate-400">Actual: {tipoCambio ?? "N/D"}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={tipoCambioInput}
-                    onChange={(e) => setTipoCambioInput(e.target.value)}
-                    className="w-20 rounded-lg border-slate-200 bg-slate-50 px-2 py-1 text-sm font-bold text-slate-700 focus:bg-white"
-                  />
-                  <button onClick={saveTipoCambio} disabled={saving} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-white transition-opacity disabled:opacity-50">
-                    {saving ? "..." : "OK"}
-                  </button>
                 </div>
               </div>
             </article>

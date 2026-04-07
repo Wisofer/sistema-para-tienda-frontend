@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useState } from "react";
+import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 
 // Hook personalizado
 import { useReports } from "../hooks/useReports.js";
@@ -8,6 +9,7 @@ import { ReportCatalog } from "../components/reports/ReportCatalog.jsx";
 import { ReportFilters } from "../components/reports/ReportFilters.jsx";
 import { ReportTables } from "../components/reports/ReportTables.jsx";
 import { OrderDetailModal } from "../components/reports/OrderDetailModal.jsx";
+import { VentaCancelacionModal } from "../components/reports/VentaCancelacionModal.jsx";
 import { CategoriaProductosModal } from "../components/reports/CategoriaProductosModal.jsx";
 import { BackofficePageShell } from "../components/index.js";
 
@@ -19,6 +21,8 @@ import { BackofficePageShell } from "../components/index.js";
  * Lineas aproximadas: < 100 (Reducción de ~800 líneas).
  */
 export function ReportsView({ currencySymbol = "C$" }) {
+  const snackbar = useSnackbar();
+  const [quickCancelVentaId, setQuickCancelVentaId] = useState(null);
   const {
     activeReport,
     setActiveReport,
@@ -82,6 +86,14 @@ export function ReportsView({ currencySymbol = "C$" }) {
             orders={orders}
             currencySymbol={currencySymbol}
             openOrderDetail={openOrderDetail}
+            onRequestCancelVenta={(order) => {
+              const id = Number(order?.sourceId);
+              if (!Number.isFinite(id) || id <= 0) {
+                snackbar.error("ID de venta no válido.");
+                return;
+              }
+              setQuickCancelVentaId(id);
+            }}
             openCategoriaDetail={openCategoriaDetail}
             loading={loading}
           />
@@ -97,6 +109,22 @@ export function ReportsView({ currencySymbol = "C$" }) {
         loading={detailLoading}
         order={detailOrder}
         currencySymbol={currencySymbol}
+        onSuccessAfterMutation={() => {
+          loadReportData(activeReport);
+          snackbar.success("Operación registrada. Listado actualizado.");
+        }}
+      />
+
+      <VentaCancelacionModal
+        open={quickCancelVentaId != null}
+        onClose={() => setQuickCancelVentaId(null)}
+        ventaId={quickCancelVentaId}
+        mode="total"
+        onSuccess={() => {
+          loadReportData(activeReport);
+          setQuickCancelVentaId(null);
+          snackbar.success("Venta cancelada correctamente.");
+        }}
       />
 
       <CategoriaProductosModal

@@ -1,4 +1,5 @@
-import React from "react";
+import React, { useMemo, useState } from "react";
+import { Eye, Search, X } from "lucide-react";
 import { formatCurrency } from "../../utils/currency.js";
 import { 
   cierreFechaRaw, 
@@ -21,6 +22,8 @@ export function ReportTables({
   orders,
   currencySymbol,
   openOrderDetail,
+  /** Anulación rápida desde la fila (solo reporte ventas) */
+  onRequestCancelVenta,
   openCategoriaDetail,
   loading = false,
 }) {
@@ -81,7 +84,14 @@ export function ReportTables({
         )}
         {activeReport === "caja" && <CajaTable rows={rows} currencySymbol={currencySymbol} />}
         {activeReport === "movimientos" && <MovimientosTable rows={rows} />}
-        {activeReport === "ventas" && <VentasTable orders={orders} currencySymbol={currencySymbol} openOrderDetail={openOrderDetail} />}
+        {activeReport === "ventas" && (
+          <VentasTable
+            orders={orders}
+            currencySymbol={currencySymbol}
+            openOrderDetail={openOrderDetail}
+            onRequestCancelVenta={onRequestCancelVenta}
+          />
+        )}
       </article>
     </div>
   );
@@ -183,7 +193,7 @@ function CategoriasTable({ rows, currencySymbol, openCategoriaDetail }) {
     <>
       <h4 className="mb-4 text-base font-bold text-slate-800 uppercase tracking-tight">Ventas por Categoría</h4>
       <p className="mb-3 text-xs text-slate-500">
-        Una fila por categoría. Use “Ver detalle” para ver los productos vendidos en esa categoría.
+        Una fila por categoría. En acciones, el ícono del ojo abre el detalle de productos de esa categoría.
       </p>
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm">
@@ -207,9 +217,11 @@ function CategoriasTable({ rows, currencySymbol, openCategoriaDetail }) {
                   <button
                     type="button"
                     onClick={() => openCategoriaDetail?.(cat)}
-                    className="rounded-lg bg-blue-50 px-3 py-1 text-[10px] font-black uppercase text-blue-600 transition-colors hover:bg-blue-100"
+                    title="Ver detalle"
+                    aria-label="Ver detalle de categoría"
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
                   >
-                    Ver detalle
+                    <Eye className="h-4 w-4" />
                   </button>
                 </td>
               </tr>
@@ -311,59 +323,129 @@ function MovimientosTable({ rows }) {
   );
 }
 
-function VentasTable({ orders, currencySymbol, openOrderDetail }) {
+function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelVenta }) {
+  const [ticketSearch, setTicketSearch] = useState("");
+
+  const filteredOrders = useMemo(() => {
+    const q = String(ticketSearch || "").trim().toLowerCase();
+    if (!q) return orders;
+    return orders.filter((o) => {
+      const num = String(o.numero ?? "").toLowerCase();
+      const idStr = o.sourceId != null ? String(o.sourceId) : "";
+      return num.includes(q) || idStr.includes(q);
+    });
+  }, [orders, ticketSearch]);
+
   return (
     <>
-      <h4 className="mb-4 text-base font-bold text-slate-800 uppercase tracking-tight">
-        Ventas / tickets del período
-      </h4>
-      <p className="mb-3 text-xs text-slate-500">
-        Una fila por venta cobrada. Use “Ver detalle” para ver todas las líneas del ticket.
-      </p>
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead className={REPORT_THEAD}>
-            <tr>
-              <th className="px-4 py-3">Ticket</th>
-              <th className="px-4 py-3">Fecha</th>
-              <th className="px-4 py-3">Cliente / ref.</th>
-              <th className="px-4 py-3 text-center">Productos</th>
-              <th className="px-4 py-3 text-right">Subtotal</th>
-              <th className="px-4 py-3 text-right">Total cobrado</th>
-              <th className="px-4 py-3 text-center">Acciones</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 font-medium italic">
-            {orders.map((o) => (
-              <tr key={o.key} className="hover:bg-slate-50/50 transition-colors">
-                <td className="px-4 py-3 font-bold text-slate-800 uppercase">{String(o.numero)}</td>
-                <td className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase">
-                  {String(o.fecha || "").slice(0, 10)}
-                </td>
-                <td className="px-4 py-3 not-italic">{o.referencia}</td>
-                <td className="px-4 py-3 text-center font-semibold not-italic text-slate-700">
-                  {o.cantidadLineas != null ? o.cantidadLineas : "—"}
-                </td>
-                <td className="px-4 py-3 text-right font-semibold not-italic text-slate-700">
-                  {o.subtotalLineas != null ? formatCurrency(o.subtotalLineas, currencySymbol) : "—"}
-                </td>
-                <td className="px-4 py-3 text-right font-black text-blue-600 not-italic">
-                  {formatCurrency(o.monto, currencySymbol)}
-                </td>
-                <td className="px-4 py-3 text-center">
-                  <button
-                    type="button"
-                    onClick={() => openOrderDetail(o)}
-                    className="rounded-lg bg-blue-50 px-3 py-1 text-[10px] font-black uppercase text-blue-600 hover:bg-blue-100 transition-colors"
-                  >
-                    Ver detalle
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h4 className="text-base font-bold text-slate-800 uppercase tracking-tight">
+            Ventas / tickets del período
+          </h4>
+          <p className="mt-1 text-xs text-slate-500">
+            Filtro «Tickets» arriba. El ojo es el detalle. <strong>Cancelar</strong> (X) solo en cobrados; pide el código que
+            configuraste en Ajustes.
+          </p>
+        </div>
+        <div className="relative w-full sm:max-w-xs">
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="search"
+            value={ticketSearch}
+            onChange={(e) => setTicketSearch(e.target.value)}
+            placeholder="Buscar por ticket…"
+            autoComplete="off"
+            className="w-full rounded-lg border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm shadow-sm placeholder:text-slate-400 focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+            aria-label="Buscar por número de ticket"
+          />
+        </div>
       </div>
+
+      {orders.length > 0 && filteredOrders.length === 0 ? (
+        <p className="rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 py-6 text-center text-sm text-slate-600">
+          No hay tickets que coincidan con «{ticketSearch.trim()}». Prueba otro número o borra el filtro.
+        </p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead className={REPORT_THEAD}>
+              <tr>
+                <th className="px-4 py-3">Ticket</th>
+                <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">Fecha</th>
+                <th className="px-4 py-3">Cliente / ref.</th>
+                <th className="px-4 py-3 text-center">Productos</th>
+                <th className="px-4 py-3 text-right">Subtotal</th>
+                <th className="px-4 py-3 text-right">Total neto</th>
+                <th className="px-4 py-3 text-center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 font-medium italic">
+              {filteredOrders.map((o) => {
+                const est = String(o.estado || "").toLowerCase();
+                const esAnulada = est.includes("anulad");
+                return (
+                <tr key={o.key} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="px-4 py-3 font-bold text-slate-800 uppercase">{String(o.numero)}</td>
+                  <td className="px-4 py-3 not-italic">
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-black uppercase ${
+                        esAnulada ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"
+                      }`}
+                    >
+                      {o.estado}
+                    </span>
+                    {o.fechaUltimaActualizacion ? (
+                      <div className="mt-0.5 text-[10px] font-normal normal-case text-slate-500">
+                        Act. {String(o.fechaUltimaActualizacion).slice(0, 16).replace("T", " ")}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase">
+                    {String(o.fecha || "").slice(0, 10)}
+                  </td>
+                  <td className="px-4 py-3 not-italic">{o.referencia}</td>
+                  <td className="px-4 py-3 text-center font-semibold not-italic text-slate-700">
+                    {o.cantidadLineas != null ? o.cantidadLineas : "—"}
+                  </td>
+                  <td className="px-4 py-3 text-right font-semibold not-italic text-slate-700">
+                    {o.subtotalLineas != null ? formatCurrency(o.subtotalLineas, currencySymbol) : "—"}
+                  </td>
+                  <td className={`px-4 py-3 text-right font-black not-italic ${esAnulada ? "text-slate-600" : "text-blue-600"}`}>
+                    {formatCurrency(o.monto, currencySymbol)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center justify-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => openOrderDetail(o)}
+                        title="Ver detalle del ticket"
+                        aria-label="Ver detalle del ticket"
+                        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      {!esAnulada ? (
+                        <button
+                          type="button"
+                          onClick={() => onRequestCancelVenta?.(o)}
+                          title="Cancelar venta (código de Ajustes)"
+                          aria-label="Cancelar venta"
+                          className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-red-200 bg-white text-red-700 shadow-sm transition-colors hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      ) : null}
+                    </div>
+                  </td>
+                </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </>
   );
 }

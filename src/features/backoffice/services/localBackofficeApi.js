@@ -304,13 +304,16 @@ export const localBackofficeApi = {
       return { lineas: [], totalCobrado: 0, subtotalLineas: 0, cantidadLineas: 0, cantidadUnidades: 0 };
     }
     const detalles = s.detalles || [];
-    const lineas = detalles.map((d) => ({
+    const lineas = detalles.map((d, idx) => ({
+      detalleId: d.detalleId ?? d.id ?? idx + 1,
       productoNombre: d.nombreProducto || d.productoNombre || "Producto",
       cantidad: d.cantidad,
       precioUnitario: d.precioUnitario,
       subtotal: d.subtotal ?? d.cantidad * d.precioUnitario,
+      anulado: Boolean(d.anulado),
     }));
     return {
+      ventaId: s.id,
       numeroTicket: s.numeroFactura,
       fecha: s.fecha,
       lineas,
@@ -351,6 +354,10 @@ export const localBackofficeApi = {
     items: [],
   }),
   reportesExportarVentasPorVendedorExcel: async () => {},
+  reportesExportarProductosTopExcel: async () => {},
+
+  ventaCancelar: async () => ({ success: true, message: "Venta anulada (demo)" }),
+  ventaCancelarParcial: async () => ({ success: true, message: "Devolución registrada (demo)" }),
 
   // Whatsapp stubs
   listPlantillasWhatsapp: async () => ({ items: [] }), getPlantillaWhatsapp: async () => ({}), createPlantillaWhatsapp: async () => ({}), updatePlantillaWhatsapp: async () => ({}), deletePlantillaWhatsapp: async () => ({}), marcarDefaultPlantillaWhatsapp: async () => ({}),

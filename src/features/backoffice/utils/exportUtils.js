@@ -2,6 +2,8 @@
  * Utilidades para exportación de datos a formatos descargables (CSV/Excel).
  */
 
+import { downloadBlobAsFile } from "../../../api/downloadUtils.js";
+
 /** Columnas del export de inventario (CSV UTF-8 con BOM, compatible con Excel). */
 export const INVENTORY_EXPORT_HEADERS = [
   { label: "Código", key: "codigo" },
@@ -41,15 +43,5 @@ export function downloadCSV(data, headers, filename) {
   // 4. Añadir BOM (Byte Order Mark) para que Excel reconozca UTF-8 correctamente
   const BOM = "\uFEFF";
   const blob = new Blob([BOM + csvString], { type: "text/csv;charset=utf-8;" });
-  
-  // 5. Descargar
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.setAttribute("href", url);
-  link.setAttribute("download", filename);
-  link.style.visibility = 'hidden';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  downloadBlobAsFile(blob, filename);
 }

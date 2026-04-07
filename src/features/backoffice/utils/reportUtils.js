@@ -130,6 +130,8 @@ export function normalizeReporteTicketDetalle(raw) {
     };
   }
   const lineas = d.lineas ?? d.Lineas ?? [];
+  const ventaIdRaw = d.ventaId ?? d.VentaId ?? d.id ?? d.Id ?? null;
+  const ventaIdNum = ventaIdRaw != null && ventaIdRaw !== "" ? Number(ventaIdRaw) : null;
 
   /** Alineado con ticket-detalle: productoNombre (oficial), nombreProducto (serialización C# antigua), codigoProducto como respaldo. */
   function pickLineaProductoEtiqueta(l) {
@@ -163,8 +165,14 @@ export function normalizeReporteTicketDetalle(raw) {
             l.TotalLinea ??
             (Number.isFinite(cant) && Number.isFinite(pu) ? cant * pu : 0)
         );
+        const detalleIdRaw = l.detalleId ?? l.DetalleId ?? l.id ?? l.Id;
+        const detalleIdNum =
+          detalleIdRaw != null && detalleIdRaw !== "" ? Number(detalleIdRaw) : null;
+        const anulado = Boolean(l.anulado ?? l.Anulado ?? false);
         return {
-          id: l.id ?? l.Id ?? l.productoId ?? l.ProductoId ?? i,
+          id: detalleIdRaw ?? l.productoId ?? l.ProductoId ?? i,
+          detalleId: Number.isFinite(detalleIdNum) && detalleIdNum > 0 ? detalleIdNum : null,
+          anulado,
           servicio: null,
           producto: pickLineaProductoEtiqueta(l),
           cantidad: cant,
@@ -180,6 +188,7 @@ export function normalizeReporteTicketDetalle(raw) {
 
   return {
     kind: "ticket",
+    ventaId: Number.isFinite(ventaIdNum) && ventaIdNum > 0 ? ventaIdNum : null,
     numero:
       d.numeroTicket ?? d.NumeroTicket ?? d.numero ?? d.Numero ?? d.ticket ?? d.Ticket ?? "-",
     fecha: d.fecha ?? d.Fecha ?? "",

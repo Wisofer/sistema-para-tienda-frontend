@@ -22,7 +22,7 @@ export const backofficeApi = {
   me: () => authApi.me(),
 
   // Productos
-  listProductos: (params) => productsApi.list(params),
+  listProductos: (params, fetchOpts) => productsApi.list(params, fetchOpts),
   getProducto: (id) => productsApi.get(id),
   createProducto: (body) => productsApi.create(body),
   updateProducto: (id, body) => productsApi.update(id, body),
@@ -82,6 +82,10 @@ export const backofficeApi = {
 
   ventasProcesarPago: (body) => ventasApi.procesarPago(body),
   ventasGestionarPago: (body) => ventasApi.gestionarPago(body),
+  /** Anulación total (Admin + PIN de configuración). */
+  ventaCancelar: (id, body) => ventasApi.cancelar(id, body),
+  /** Devolución parcial por IDs de DetalleVentas. */
+  ventaCancelarParcial: (id, body) => ventasApi.cancelarParcial(id, body),
 
   // Catálogos
   catalogoCategoriasProducto: () => api.get("/api/v1/catalogos/categorias-producto"),
@@ -98,6 +102,7 @@ export const backofficeApi = {
   reportesVentasPorVendedor: (params) => reportsApi.salesBySeller(params),
   reportesExportarVentasPorVendedorExcel: (params) => reportsApi.downloadVentasPorVendedorExcel(params),
   reportesProductosTop: (params) => reportsApi.topProducts(params),
+  reportesExportarProductosTopExcel: (params) => reportsApi.downloadProductosTopExcel(params),
   reportesVentasPorCategoria: (params) => reportsApi.salesByCategory(params),
   reportesVentasPorCategoriaDesglose: (params) => reportsApi.ventasPorCategoriaDesglose(params),
   reportesExportarVentasPorCategoriaDesgloseExcel: (params) =>

@@ -12,7 +12,13 @@ import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 export function useReports(currencySymbol = "C$") {
   const snackbar = useSnackbar();
   const [activeReport, setActiveReport] = useState(null);
-  const [range, setRange] = useState({ desde: "", hasta: "", top: 10 });
+  const [range, setRange] = useState({
+    desde: "",
+    hasta: "",
+    top: 10,
+    /** @type {'activas'|'anuladas'|'todas'} */
+    filtroVentas: "activas",
+  });
   const [rows, setRows] = useState([]);
   const [summary, setSummary] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -32,6 +38,7 @@ export function useReports(currencySymbol = "C$") {
   const reportRange = {
     desde: range?.desde?.trim() || undefined,
     hasta: range?.hasta?.trim() || undefined,
+    filtroVentas: range?.filtroVentas || "activas",
   };
 
   const loadReportData = useCallback(async (reportId = activeReport) => {
@@ -73,6 +80,9 @@ export function useReports(currencySymbol = "C$") {
             monto: Number(o.totalCobrado ?? o.TotalCobrado ?? o.monto ?? o.total ?? 0),
             cantidadLineas: o.cantidadLineas ?? o.CantidadLineas,
             subtotalLineas: o.subtotalLineas ?? o.SubtotalLineas,
+            estado: String(o.estado ?? o.Estado ?? "").trim() || "—",
+            fechaUltimaActualizacion:
+              o.fechaUltimaActualizacion ?? o.FechaUltimaActualizacion ?? null,
           }))
         );
         setSummary({
@@ -201,13 +211,12 @@ export function useReports(currencySymbol = "C$") {
           snackbar.success("Reporte exportado con éxito.");
           return;
         case "productos-top":
-          data = await backofficeApi.reportesProductosTop({ ...reportRange, top: range.top || 10 });
-          headers = [
-            { label: "Producto", key: "nombre" },
-            { label: "Cantidad Vendida", key: "cantidad" },
-            { label: "Total Ventas", key: "total" }
-          ];
-          break;
+          await backofficeApi.reportesExportarProductosTopExcel({
+            ...reportRange,
+            top: range.top || 10,
+          });
+          snackbar.success("Reporte exportado con éxito.");
+          return;
         case "vendedores":
           await backofficeApi.reportesExportarVentasPorVendedorExcel(reportRange);
           snackbar.success("Reporte exportado con éxito.");
@@ -263,6 +272,7 @@ export function useReports(currencySymbol = "C$") {
       try {
         const raw = await backofficeApi.reportesVentaTicketDetalle(sourceId);
         const ticket = normalizeReporteTicketDetalle(raw);
+        ticket.ventaId = ticket.ventaId ?? sourceId;
         if (ticket.items.length > 0 || ticket.totalCobrado > 0 || ticket.subtotalLineas > 0) {
           setDetailOrder(ticket);
           return;

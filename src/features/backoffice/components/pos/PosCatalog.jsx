@@ -1,6 +1,7 @@
 import React from "react";
 import { Package, Image as ImageIcon } from "lucide-react";
 import { formatCurrency } from "../../utils/currency.js";
+import { isProductBlockedByStockForPos } from "../../utils/posVariantes.js";
 
 /**
  * Catálogo de productos para el POS.
@@ -46,11 +47,14 @@ export function PosCatalog({
 
   return (
     <div className="grid grid-cols-2 gap-4 pb-24 sm:grid-cols-3 lg:grid-cols-4 lg:pb-8 xl:grid-cols-5 2xl:grid-cols-6">
-      {products.map((p) => (
+      {products.map((p) => {
+        const sinStock = isProductBlockedByStockForPos(p);
+        return (
         <button
           key={p.id}
           onClick={() => addToCart(p)}
-          disabled={!cajaAbierta || actionBusy}
+          disabled={!cajaAbierta || actionBusy || sinStock}
+          title={sinStock ? "Sin stock disponible" : undefined}
           className="group relative flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 active:scale-[0.96] disabled:opacity-50"
         >
           {/* Imagen con Aspect Ratio controlado */}
@@ -104,7 +108,8 @@ export function PosCatalog({
             </div>
           </div>
         </button>
-      ))}
+        );
+      })}
     </div>
   );
 }

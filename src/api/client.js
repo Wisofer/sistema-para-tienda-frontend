@@ -59,6 +59,31 @@ async function runRefreshTokenFlow() {
   }
 }
 
+function parseApiErrorMessageFromBody(text) {
+  if (text == null || typeof text !== "string") return "";
+  let errMsg = text;
+  try {
+    const data = JSON.parse(text);
+    errMsg =
+      data.message ||
+      data.Message ||
+      data.error ||
+      data.Error ||
+      data.title ||
+      data.Title ||
+      (typeof data.errors === "string" ? data.errors : null) ||
+      text;
+  } catch (_) {}
+  return typeof errMsg === "string" && errMsg.trim() ? errMsg.trim() : "";
+}
+
+function throwHttpError(status, bodyText) {
+  const msg = parseApiErrorMessageFromBody(bodyText) || `Error HTTP ${status}`;
+  const err = new Error(msg);
+  err.status = status;
+  throw err;
+}
+
 async function request(path, options = {}, retryOnUnauthorized = true, withEnvelope = false) {
   const url = `${getApiUrl()}${path.startsWith("/") ? path : `/${path}`}`;
   let headers = {
@@ -92,22 +117,7 @@ async function request(path, options = {}, retryOnUnauthorized = true, withEnvel
   }
   if (!res.ok) {
     const text = await res.text();
-    let errMsg = text;
-    try {
-      const data = JSON.parse(text);
-      errMsg =
-        data.message ||
-        data.Message ||
-        data.error ||
-        data.Error ||
-        data.title ||
-        data.Title ||
-        (typeof data.errors === "string" ? data.errors : null) ||
-        text;
-    } catch (_) {}
-    const err = new Error(typeof errMsg === "string" && errMsg.trim() ? errMsg.trim() : `Error HTTP ${res.status}`);
-    err.status = res.status;
-    throw err;
+    throwHttpError(res.status, text);
   }
   if (res.status === 204) return null;
   const json = await res.json();
@@ -162,19 +172,7 @@ export async function fetchBlob(path) {
   const ct = (res.headers.get("content-type") || "").toLowerCase();
   if (!res.ok) {
     const text = await res.text();
-    let errMsg = text;
-    try {
-      const data = JSON.parse(text);
-      errMsg =
-        data.message ||
-        data.Message ||
-        data.error ||
-        data.Error ||
-        text;
-    } catch (_) {}
-    const err = new Error(typeof errMsg === "string" && errMsg.trim() ? errMsg.trim() : `Error HTTP ${res.status}`);
-    err.status = res.status;
-    throw err;
+    throwHttpError(res.status, text);
   }
   if (ct.includes("application/json")) {
     const json = await res.json();
@@ -183,8 +181,83 @@ export async function fetchBlob(path) {
   return res.blob();
 }
 
+function isLikelyZipOrOfficeBinary(bytes) {
+  if (!bytes || bytes.length < 2) return false;
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b) return true;
+  if (bytes[0] === 0xd0 && bytes[1] === 0xcf) return true;
+  return false;
+}
+
+/**
+ * Exportaciones Excel: distingue .xlsx (ZIP) de JSON envuelto o respuestas erróneas tipo «OK».
+ */
+export async function fetchExportBlob(path) {
+  const res = await fetchWithAuth(path, { method: "GET" });
+  const buf = await res.arrayBuffer();
+  const bytes = new Uint8Array(buf);
+
+  if (!res.ok) {
+    const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+    throwHttpError(res.status, text);
+  }
+
+  if (isLikelyZipOrOfficeBinary(bytes)) {
+    return new Blob([buf], {
+      type:
+        res.headers.get("content-type") ||
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+  }
+
+  const text = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+  const trimmed = text.trimStart();
+  if (trimmed.startsWith("{") || trimmed.startsWith("[")) {
+    try {
+      const data = JSON.parse(text);
+      const success = data.success ?? data.Success;
+      const msg = String(data.message ?? data.Message ?? "").trim();
+      if (success === false) {
+        throw new Error(msg || "Error al exportar.");
+      }
+      throw new Error(
+        msg ||
+          "El servidor respondió JSON en lugar del archivo. Revisar endpoint de exportación o Content-Type."
+      );
+    } catch (e) {
+      if (e instanceof SyntaxError) {
+        return new Blob([buf], { type: res.headers.get("content-type") || "application/octet-stream" });
+      }
+      if (e instanceof Error && e.message) throw e;
+      throw new Error("El servidor devolvió JSON en lugar del archivo de exportación.");
+    }
+  }
+
+  if (!isLikelyZipOrOfficeBinary(bytes) && bytes.length > 0 && bytes.length < 512) {
+    const flat = text.trim();
+    if (flat.length < 120 && !/[\r\n]/.test(flat)) {
+      const lower = flat.toLowerCase();
+      if (
+        lower === "ok" ||
+        lower === "okay" ||
+        lower === "success" ||
+        lower === "true" ||
+        lower === "false" ||
+        lower === "1" ||
+        lower === "0"
+      ) {
+        throw new Error(
+          `El servidor respondió «${flat}» en lugar de un archivo Excel. Suele indicar proxy o ruta que no devuelve el .xlsx.`
+        );
+      }
+    }
+  }
+
+  return new Blob([buf], { type: res.headers.get("content-type") || "application/octet-stream" });
+}
+
 export const api = {
-  get: (path) => request(path, { method: "GET" }),
+  /** Opciones extra de `fetch` (p. ej. `{ signal }` para AbortController). */
+  get: (path, fetchOptions = {}) => request(path, { method: "GET", ...fetchOptions }),
   post: (path, body) => request(path, { method: "POST", body }),
   put: (path, body) => request(path, { method: "PUT", body }),
   patch: (path, body) => request(path, { method: "PATCH", body }),

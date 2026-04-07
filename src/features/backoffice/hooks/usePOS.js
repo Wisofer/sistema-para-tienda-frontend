@@ -15,7 +15,7 @@ import {
   unwrapEnvelope,
 } from "../utils/posPedido.js";
 import { PAYMENT_METHOD_API } from "../../../utils/paymentMethod.js";
-import { fetchPosProductosYCategorias } from "../utils/posCatalogLoad.js";
+import { fetchPosProductosBusqueda, fetchPosProductosYCategorias } from "../utils/posCatalogLoad.js";
 import { printPosTicketAfterPayment } from "../utils/backofficePrint.js";
 import {
   buildOpcionesResumenLocal,
@@ -27,8 +27,19 @@ import {
   productoTieneOpcionesVisibles,
   sumarPrecioAdicionalOpciones,
 } from "../utils/productoOpciones.js";
-import { labelVarianteResumen, normalizeProductoVariantes, productoRequiereModalVariante } from "../utils/posVariantes.js";
-import { POS_ORDER_VIRTUAL_ID, calculateSubtotal, filterPosProducts } from "../utils/posUtils.js";
+import {
+  cartQtyForProductBucket,
+  getPosStockDisponible,
+  labelVarianteResumen,
+  normalizeProductoVariantes,
+  productoRequiereModalVariante,
+} from "../utils/posVariantes.js";
+import {
+  POS_ORDER_VIRTUAL_ID,
+  calculateSubtotal,
+  filterPosProducts,
+  mergePosProductSources,
+} from "../utils/posUtils.js";
 import { useOnlineStatus } from "../../../hooks/useOnlineStatus.js";
 import { NETWORK_UI } from "../../../constants/networkUi.js";
 
@@ -45,6 +56,9 @@ export function usePOS(currencySymbol = "C$") {
   const [products, setProducts] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [search, setSearch] = useState("");
+  /** Resultados de búsqueda en servidor (null = usar solo `products` del catálogo base). */
+  const [searchResultsProducts, setSearchResultsProducts] = useState(null);
+  const [catalogSearchLoading, setCatalogSearchLoading] = useState(false);
   const [cart, setCart] = useState([]);
   const [exchangeRate, setExchangeRate] = useState(36.8);
   const [actionBusy, setActionBusy] = useState(false);
@@ -61,6 +75,8 @@ export function usePOS(currencySymbol = "C$") {
 
   /** Evita doble envío de cobro (doble clic / submit rápido antes de que `busy` repinte). */
   const paymentInFlightRef = useRef(false);
+  /** Ignora respuestas de búsqueda obsoletas si el usuario cambió el término. */
+  const posSearchSeqRef = useRef(0);
 
   const applyPosCatalogData = useCallback((catalog) => {
     setProducts(catalog.products);
@@ -105,10 +121,18 @@ export function usePOS(currencySymbol = "C$") {
     try {
       const catalog = await fetchPosProductosYCategorias(backofficeApi, PAGINATION.POS_PRODUCTOS);
       applyPosCatalogData(catalog);
+      const q = search.trim();
+      if (q) {
+        const items = await fetchPosProductosBusqueda(backofficeApi, PAGINATION.POS_PRODUCTOS, {
+          search: q,
+          categoriaId: selectedCategory || undefined,
+        });
+        setSearchResultsProducts(items);
+      }
     } catch (e) {
       snackbar.error(e.message || "No se pudo actualizar el catálogo.");
     }
-  }, [snackbar, applyPosCatalogData]);
+  }, [snackbar, applyPosCatalogData, search, selectedCategory]);
 
   useEffect(() => {
     const onInventoryUpdated = () => {
@@ -118,12 +142,55 @@ export function usePOS(currencySymbol = "C$") {
     return () => window.removeEventListener(POS_INVENTORY_UPDATED_EVENT, onInventoryUpdated);
   }, [refreshCatalogProducts]);
 
+  /** Con texto en el buscador: misma búsqueda en API que inventario; AbortSignal + seq evitan respuestas viejas. */
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) {
+      setSearchResultsProducts(null);
+      setCatalogSearchLoading(false);
+      return;
+    }
+    setCatalogSearchLoading(true);
+    const ac = new AbortController();
+    const seq = ++posSearchSeqRef.current;
+    const t = setTimeout(() => {
+      fetchPosProductosBusqueda(backofficeApi, PAGINATION.POS_PRODUCTOS, {
+        search: q,
+        categoriaId: selectedCategory || undefined,
+        signal: ac.signal,
+      })
+        .then((items) => {
+          if (seq !== posSearchSeqRef.current) return;
+          setSearchResultsProducts(items);
+          setCatalogSearchLoading(false);
+        })
+        .catch((e) => {
+          if (e?.name === "AbortError") return;
+          if (seq !== posSearchSeqRef.current) return;
+          setCatalogSearchLoading(false);
+          snackbar.error(e.message || "Error en la búsqueda.");
+        });
+    }, 320);
+    return () => {
+      clearTimeout(t);
+      ac.abort();
+    };
+  }, [search, selectedCategory, snackbar]);
+
+  /** Catálogo base + resultados de búsqueda (por id) para stock en carrito. */
+  const posProductById = useMemo(
+    () => mergePosProductSources(products, searchResultsProducts),
+    [products, searchResultsProducts]
+  );
+
   /**
    * Productos filtrados para el catálogo.
    */
   const filteredProducts = useMemo(() => {
-    return filterPosProducts(products, search, selectedCategory);
-  }, [products, search, selectedCategory]);
+    const q = search.trim();
+    const source = q ? (searchResultsProducts ?? []) : products;
+    return filterPosProducts(source, search, selectedCategory);
+  }, [products, search, selectedCategory, searchResultsProducts]);
 
   /**
    * Actualizar cantidad en el carrito.
@@ -140,11 +207,27 @@ export function usePOS(currencySymbol = "C$") {
 
         if (newQty <= 0) return prev;
 
+        if (delta > 0) {
+          const product = posProductById.get(Number(item.id));
+          if (product?.controlarStock) {
+            const vid =
+              item.varianteId != null && Number(item.varianteId) > 0 ? Number(item.varianteId) : null;
+            const stockAvail = getPosStockDisponible(product, vid);
+            if (stockAvail != null) {
+              const other = cartQtyForProductBucket(prev, lineId, item);
+              if (other + newQty > stockAvail) {
+                setTimeout(() => snackbar.error("No hay stock suficiente."), 0);
+                return prev;
+              }
+            }
+          }
+        }
+
         next[idx] = { ...item, qty: newQty };
         return next;
       });
     },
-    []
+    [posProductById, snackbar]
   );
 
   /**
@@ -162,8 +245,8 @@ export function usePOS(currencySymbol = "C$") {
       if (!product || !variant) return;
       const vid = Number(variant.id);
       if (!Number.isFinite(vid) || vid <= 0) return;
-      const stockV = Number(variant.stock ?? 0);
-      if (product.controlarStock && stockV <= 0) {
+      const stockAvail = getPosStockDisponible(product, vid);
+      if (product.controlarStock && stockAvail <= 0) {
         snackbar.error("Sin stock disponible para esta variante.");
         return;
       }
@@ -178,14 +261,14 @@ export function usePOS(currencySymbol = "C$") {
           const next = [...prev];
           const prevQty = Math.max(1, Math.floor(Number(next[idx].qty) || 1));
           const merged = { ...next[idx], qty: prevQty + 1 };
-          if (product.controlarStock && merged.qty > stockV) {
+          if (product.controlarStock && merged.qty > stockAvail) {
             setTimeout(() => snackbar.error("No hay stock suficiente para esta variante."), 0);
             return prev;
           }
           next[idx] = merged;
           return next;
         }
-        if (product.controlarStock && stockV < 1) {
+        if (product.controlarStock && stockAvail < 1) {
           setTimeout(() => snackbar.error("No hay stock suficiente para esta variante."), 0);
           return prev;
         }
@@ -234,14 +317,38 @@ export function usePOS(currencySymbol = "C$") {
       }
 
       const lineId = genPosLineId();
+      const stockAvail = getPosStockDisponible(product, null);
+      if (product.controlarStock && stockAvail != null && stockAvail < 1) {
+        snackbar.error("Sin stock disponible.");
+        return;
+      }
+
       setCart((prev) => {
         const idx = prev.findIndex(
           (x) => x.id === product.id && posLineEsProductoSimpleSinOpciones(x)
         );
         if (idx >= 0) {
+          if (product.controlarStock && stockAvail != null) {
+            const line = prev[idx];
+            const other = cartQtyForProductBucket(prev, line.lineId, line);
+            if (other + line.qty + 1 > stockAvail) {
+              setTimeout(() => snackbar.error("No hay stock suficiente."), 0);
+              return prev;
+            }
+          }
           const next = [...prev];
           next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
           return next;
+        }
+        if (product.controlarStock && stockAvail != null) {
+          const already = cartQtyForProductBucket(prev, undefined, {
+            id: product.id,
+            varianteId: null,
+          });
+          if (already + 1 > stockAvail) {
+            setTimeout(() => snackbar.error("No hay stock suficiente."), 0);
+            return prev;
+          }
         }
         const newLine = {
           lineId,
@@ -255,11 +362,10 @@ export function usePOS(currencySymbol = "C$") {
           talla: product.talla,
           imagen: product.imagen,
         };
-        const next = [...prev, newLine];
-        return next;
+        return [...prev, newLine];
       });
     },
-    [addVariantToCart]
+    [addVariantToCart, snackbar]
   );
 
   /**
@@ -275,6 +381,12 @@ export function usePOS(currencySymbol = "C$") {
     const lineId = genPosLineId();
     const selKey = opcionesSeleccionadasKey(opcionesSeleccionadas);
 
+    const stockAvail = getPosStockDisponible(product, null);
+    if (product.controlarStock && stockAvail != null && stockAvail < 1) {
+      snackbar.error("Sin stock disponible.");
+      return;
+    }
+
     setCart((prev) => {
       const idx = prev.findIndex(
         (x) =>
@@ -283,9 +395,25 @@ export function usePOS(currencySymbol = "C$") {
           opcionesSeleccionadasKey(x.opcionesSeleccionadas) === selKey
       );
       if (idx >= 0) {
+        if (product.controlarStock && stockAvail != null) {
+          const line = prev[idx];
+          const other = cartQtyForProductBucket(prev, line.lineId, line);
+          if (other + line.qty + 1 > stockAvail) {
+            setTimeout(() => snackbar.error("No hay stock suficiente."), 0);
+            return prev;
+          }
+        }
         const next = [...prev];
         next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
         return next;
+      }
+      if (product.controlarStock && stockAvail != null) {
+        const item = { id: product.id, varianteId: null };
+        const already = cartQtyForProductBucket(prev, undefined, item);
+        if (already + 1 > stockAvail) {
+          setTimeout(() => snackbar.error("No hay stock suficiente."), 0);
+          return prev;
+        }
       }
       return [
         ...prev,
@@ -303,7 +431,7 @@ export function usePOS(currencySymbol = "C$") {
         },
       ];
     });
-  }, []);
+  }, [snackbar]);
 
   /**
    * Preparar checkout.
@@ -449,6 +577,7 @@ export function usePOS(currencySymbol = "C$") {
 
   return {
     loading,
+    catalogSearchLoading,
     categories,
     selectedCategory,
     setSelectedCategory,
