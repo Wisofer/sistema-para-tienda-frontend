@@ -4,7 +4,6 @@ import { PAGINATION } from "../constants/pagination.js";
 import { POS_INVENTORY_UPDATED_EVENT } from "../constants/posEvents.js";
 import { resolveProductCodigoForSave } from "../utils/productCodigo.js";
 import { parseOpcionesEspecialesFromGruposApi } from "../utils/productoOpcionesEspecialesSync.js";
-import { downloadCSV, INVENTORY_EXPORT_HEADERS } from "../utils/exportUtils.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
 import { canUseCatalogosApi } from "../utils/auth.js";
@@ -13,7 +12,6 @@ import {
   tieneControlStock,
   normalizeMovementRow,
   enrichProductsWithCategoryNames,
-  fetchAllProductPages,
   normalizeInventoryCategoryFilterId,
   consumePendingInventoryCategory,
   buildCategoriesFromProducts,
@@ -70,7 +68,11 @@ export function useInventory(currencySymbol = "C$") {
   const [selectedProductName, setSelectedProductName] = useState("");
   const [stockModalProducts, setStockModalProducts] = useState([]);
   const [stockProductQuery, setStockProductQuery] = useState("");
+  const stockProductQueryRef = useRef("");
+  stockProductQueryRef.current = stockProductQuery;
   const [stockModalLoading, setStockModalLoading] = useState(false);
+  const [stockRemoteSearchItems, setStockRemoteSearchItems] = useState([]);
+  const [stockRemoteSearchLoading, setStockRemoteSearchLoading] = useState(false);
   const [stockSuggestOpen, setStockSuggestOpen] = useState(false);
   const stockSuggestBlurTimerRef = useRef(null);
 
@@ -297,26 +299,15 @@ export function useInventory(currencySymbol = "C$") {
   const exportProductsExcel = async () => {
     setSaving(true);
     try {
-      const filename = `inventario-${new Date().toISOString().slice(0, 10)}.csv`;
       const q = String(search || "").trim() || undefined;
       const cat = selectedCategory || undefined;
-      const all = await fetchAllProductPages(
-        (params) => backofficeApi.listProductos(params),
-        {
-          search: q,
-          categoriaId: cat,
-        },
-        { pageSize: PAGINATION.PRODUCTOS_ADMIN }
-      );
-      const withCat = enrichProductsWithCategoryNames(all, categories);
-      if (withCat.length === 0) {
-        snackbar.error("No hay productos para exportar con los filtros actuales.");
-        return;
-      }
-      downloadCSV(withCat, INVENTORY_EXPORT_HEADERS, filename);
+      await backofficeApi.exportarInventarioProductosExcel({
+        ...(q ? { search: q } : {}),
+        ...(cat ? { categoriaId: cat } : {}),
+      });
       snackbar.success("Inventario exportado correctamente.");
     } catch (e) {
-      snackbar.error("Error al exportar inventario.");
+      snackbar.error(e.message || "Error al exportar inventario.");
     } finally {
       setSaving(false);
     }
@@ -577,6 +568,45 @@ export function useInventory(currencySymbol = "C$") {
     }
   }, [snackbar]);
 
+  /** Con 2+ caracteres consulta el API con `search` (nombre/código según backend) para no limitarse a los 200 primeros productos del modal. */
+  useEffect(() => {
+    if (!stockModalOpen) {
+      setStockRemoteSearchItems([]);
+      setStockRemoteSearchLoading(false);
+      return;
+    }
+    const q = stockProductQuery.trim();
+    if (q.length < 2) {
+      setStockRemoteSearchItems([]);
+      setStockRemoteSearchLoading(false);
+      return;
+    }
+    const qForRequest = q;
+    const t = window.setTimeout(async () => {
+      setStockRemoteSearchLoading(true);
+      try {
+        const data = await backofficeApi.listProductos({
+          page: 1,
+          pageSize: PAGINATION.CATALOG_ALERTS,
+          search: qForRequest,
+          activos: true,
+        });
+        if (stockProductQueryRef.current.trim() !== qForRequest) return;
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setStockRemoteSearchItems(items);
+      } catch {
+        if (stockProductQueryRef.current.trim() === qForRequest) {
+          setStockRemoteSearchItems([]);
+        }
+      } finally {
+        if (stockProductQueryRef.current.trim() === qForRequest) {
+          setStockRemoteSearchLoading(false);
+        }
+      }
+    }, 320);
+    return () => window.clearTimeout(t);
+  }, [stockProductQuery, stockModalOpen]);
+
   const openProductHistory = async (p) => {
     setSaving(true);
     try {
@@ -593,23 +623,49 @@ export function useInventory(currencySymbol = "C$") {
   };
 
   const selectedStockProduct = useMemo(() => {
-    const raw = stockModalProducts.length > 0 ? stockModalProducts : products;
-    const list = raw.filter(tieneControlStock);
+    const merged = [];
+    const seen = new Set();
+    for (const p of [...stockModalProducts, ...products, ...stockRemoteSearchItems]) {
+      if (!p || seen.has(String(p.id))) continue;
+      seen.add(String(p.id));
+      merged.push(p);
+    }
+    const list = merged.filter(tieneControlStock);
     return list.find((p) => String(p.id) === String(stockForm.productoId));
-  }, [stockModalProducts, products, stockForm.productoId]);
+  }, [stockModalProducts, products, stockRemoteSearchItems, stockForm.productoId]);
 
   const stockAutocompleteList = useMemo(() => {
-    const raw = stockModalProducts.length > 0 ? stockModalProducts : products;
-    const list = raw.filter(tieneControlStock);
+    const rawLocal = stockModalProducts.length > 0 ? stockModalProducts : products;
+    const localList = rawLocal.filter(tieneControlStock);
     const q = stockProductQuery.trim().toLowerCase();
     if (!q) return [];
-    return list
-      .filter((p) => {
-        const hay = `${p.nombre || ""} ${p.codigo || ""} ${p.categoriaNombre || p.categoria || ""}`.toLowerCase();
-        return hay.includes(q);
-      })
-      .slice(0, 10);
-  }, [stockModalProducts, products, stockProductQuery]);
+
+    const applyFilter = (arr) =>
+      arr
+        .filter((p) => {
+          const hay = `${p.nombre || ""} ${p.codigo || ""} ${p.categoriaNombre || p.categoria || ""}`.toLowerCase();
+          return hay.includes(q);
+        })
+        .slice(0, 10);
+
+    const qLen = stockProductQuery.trim().length;
+    if (qLen < 2) {
+      return applyFilter(localList);
+    }
+
+    const remote = stockRemoteSearchItems.filter(tieneControlStock);
+    const localFiltered = applyFilter(localList);
+
+    if (stockRemoteSearchLoading) {
+      const remoteFiltered = applyFilter(remote);
+      return remoteFiltered.length > 0 ? remoteFiltered : localFiltered;
+    }
+    if (remote.length > 0) {
+      const remoteFiltered = applyFilter(remote);
+      return remoteFiltered.length > 0 ? remoteFiltered : localFiltered;
+    }
+    return localFiltered;
+  }, [stockModalProducts, products, stockProductQuery, stockRemoteSearchItems, stockRemoteSearchLoading]);
 
   return {
     products, categories, providers, loading, saving, error,
@@ -617,7 +673,7 @@ export function useInventory(currencySymbol = "C$") {
     filteredProducts, removeProduct, exportProductsExcel, reloadCategoriesOnly,
     modalOpen, setModalOpen, openCreate, openEdit, saveProduct, form, setForm,
     stockModalOpen, setStockModalOpen, openStockModal, submitStockAction, stockForm, setStockForm, stockMode,
-    stockModalProducts, stockProductQuery, setStockProductQuery, stockModalLoading, stockSuggestOpen, setStockSuggestOpen, stockSuggestBlurTimerRef,
+    stockModalProducts, stockProductQuery, setStockProductQuery, stockModalLoading, stockRemoteSearchLoading, stockSuggestOpen, setStockSuggestOpen, stockSuggestBlurTimerRef,
     selectedStockProduct, stockAutocompleteList,
     movementModalOpen, setMovementModalOpen, openGlobalMovements, exportMovimientosInventarioExcel,
     movementRows, movementProductLookup,

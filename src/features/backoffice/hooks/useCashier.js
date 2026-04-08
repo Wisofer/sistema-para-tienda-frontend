@@ -2,12 +2,13 @@ import { useState, useEffect, useCallback } from "react";
 import { backofficeApi } from "../services/backofficeApi.js";
 import { PAGINATION } from "../constants/pagination.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
+import { formatDiffForMessage } from "../utils/cashierArqueo.js";
 
 /**
  * Hook personalizado para manejar la lógica del módulo de Caja.
  * Extraído de CashierView para cumplir con Clean Code.
  */
-export function useCashier() {
+export function useCashier(currencySymbol = "C$") {
   const snackbar = useSnackbar();
   const [estado, setEstado] = useState(null);
   const [preview, setPreview] = useState(null);
@@ -91,11 +92,18 @@ export function useCashier() {
     setProcessing(true);
     setError("");
     try {
-      await backofficeApi.cajaCierre({
+      const result = await backofficeApi.cajaCerrar({
         montoReal: Number(cierreForm.montoReal || 0),
         observaciones: cierreForm.observaciones || undefined,
       });
-      snackbar.success("Caja cerrada correctamente.");
+      const diffRaw = result?.diferencia ?? result?.Diferencia;
+      const diffNum = diffRaw != null ? Number(diffRaw) : NaN;
+      if (Number.isFinite(diffNum)) {
+        const arqueoTxt = formatDiffForMessage(diffNum, currencySymbol);
+        snackbar.success(`Caja cerrada. Arqueo: ${arqueoTxt}.`);
+      } else {
+        snackbar.success("Caja cerrada correctamente.");
+      }
       setCierreForm({ montoReal: "", observaciones: "" });
       setShowCierreForm(false);
       await loadAll(1);

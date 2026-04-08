@@ -67,6 +67,7 @@ export function ProductsView({ currencySymbol = "C$" }) {
     setStockSuggestOpen,
     stockSuggestBlurTimerRef,
     stockAutocompleteList,
+    stockRemoteSearchLoading,
     selectedStockProduct,
     movementModalOpen,
     setMovementModalOpen,
@@ -193,6 +194,7 @@ export function ProductsView({ currencySymbol = "C$" }) {
         setStockSuggestOpen={setStockSuggestOpen}
         stockSuggestBlurTimerRef={stockSuggestBlurTimerRef}
         stockAutocompleteList={stockAutocompleteList}
+        stockRemoteSearchLoading={stockRemoteSearchLoading}
         selectedStockProduct={selectedStockProduct}
         stockForm={stockForm}
         setStockForm={setStockForm}

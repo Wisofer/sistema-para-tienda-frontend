@@ -1,12 +1,13 @@
 import { useState, useCallback, useEffect } from "react";
 import { backofficeApi } from "../services/backofficeApi.js";
-import { downloadCSV } from "../utils/exportUtils.js";
 import { normalizeMovementRow } from "../utils/inventoryUtils.js";
 import { normalizeReporteTicketDetalle } from "../utils/reportUtils.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 
 /**
  * Hook personalizado para manejar la lógica de los reportes administrativos.
+ * Exportación Excel: el servidor genera el `.xlsx`; aquí solo se invoca `backofficeApi.*` (ver `docs/REPORTES_BACKEND.md`).
+ *
  * @param {string} currencySymbol - Símbolo de moneda.
  */
 export function useReports(currencySymbol = "C$") {
@@ -155,27 +156,24 @@ export function useReports(currencySymbol = "C$") {
           promedioTicket: 0,
         });
       } else if (reportId === "caja") {
-        const data = await backofficeApi.cajaHistorial({ page: 1, pageSize: 100 });
-        const items = Array.isArray(data?.items) ? data.items : [];
-        const filtered = items.filter((x) => {
-          const raw = x.fechaCierre || x.fecha || x.createdAt;
-          if (!raw) return true;
-          const d = new Date(raw);
-          if (Number.isNaN(d.getTime())) return true;
-          if (range.desde) {
-            const f = new Date(`${range.desde}T00:00:00`);
-            if (d < f) return false;
-          }
-          if (range.hasta) {
-            const t = new Date(`${range.hasta}T23:59:59`);
-            if (d > t) return false;
-          }
-          return true;
+        const data = await backofficeApi.cajaHistorial({
+          page: 1,
+          pageSize: 100,
+          desde: reportRange.desde,
+          hasta: reportRange.hasta,
         });
-        setRows(filtered);
+        const items = Array.isArray(data?.items) ? data.items : [];
+        setRows(items);
         setSummary({
-          totalVentas: filtered.reduce((s, r) => s + Number(r.totalVentas ?? r.total ?? 0), 0),
-          totalOrdenes: filtered.length,
+          totalVentas: items.reduce(
+            (s, r) =>
+              s +
+              Number(
+                r.totalVentas ?? r.TotalGeneral ?? r.total ?? r.Total ?? 0
+              ),
+            0
+          ),
+          totalOrdenes: items.length,
           promedioTicket: 0,
         });
       } else if (reportId === "movimientos") {
@@ -201,10 +199,6 @@ export function useReports(currencySymbol = "C$") {
     setExporting(true);
     setError("");
     try {
-      let data = [];
-      let headers = [];
-      const filename = `reporte-${reportId}-${new Date().toISOString().slice(0, 10)}.csv`;
-
       switch (reportId) {
         case "ventas":
           await backofficeApi.reportesExportarVentasDetalleExcel(reportRange);
@@ -226,32 +220,16 @@ export function useReports(currencySymbol = "C$") {
           snackbar.success("Reporte exportado con éxito.");
           return;
         case "caja":
-          const rch = await backofficeApi.cajaHistorial({ page: 1, pageSize: 100 });
-          data = rch?.items || [];
-          headers = [
-            { label: "Fecha Cierre", key: "fechaCierre" },
-            { label: "Monto Apertura", key: "montoApertura" },
-            { label: "Ventas Efectivo", key: "ventasEfectivo" },
-            { label: "Total", key: "totalVentas" }
-          ];
-          break;
+          await backofficeApi.exportarCajaHistorialExcel(reportRange);
+          snackbar.success("Reporte exportado con éxito.");
+          return;
         case "movimientos":
-          const rm = await backofficeApi.movimientosProductos(reportRange);
-          data = rm?.items || [];
-          headers = [
-            { label: "Fecha", key: "fecha" },
-            { label: "Producto", key: "productoNombre" },
-            { label: "Tipo", key: "tipo" },
-            { label: "Cantidad", key: "cantidad" },
-            { label: "Motivo", key: "observaciones" }
-          ];
-          break;
+          await backofficeApi.exportarMovimientosInventarioExcel(reportRange);
+          snackbar.success("Reporte exportado con éxito.");
+          return;
         default:
           throw new Error("Reporte no soportado.");
       }
-
-      downloadCSV(data, headers, filename);
-      snackbar.success("Reporte exportado con éxito.");
     } catch (e) {
       snackbar.error(e.message || "Error al exportar reporte.");
     } finally {

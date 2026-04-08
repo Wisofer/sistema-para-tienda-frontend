@@ -1,4 +1,5 @@
-import { api } from "./client.js";
+import { api, fetchExportBlob } from "./client.js";
+import { downloadBlobAsFile } from "./downloadUtils.js";
 
 const base = "/api/v1/caja";
 
@@ -15,4 +16,10 @@ export const cajaApi = {
   cierrePreview: (params) => api.get(`${base}/cierre/preview${qs(params || {})}`),
   cierre: (body) => api.post(`${base}/cierre`, body),
   historial: (params) => api.get(`${base}/historial${qs(params)}`),
+  /** Excel de historial de cierres; filtros opcionales desde/hasta (fecha de cierre). */
+  exportarHistorialExcel: async (params) => {
+    const q = qs(params || {});
+    const blob = await fetchExportBlob(`${base}/historial/exportar${q}`);
+    downloadBlobAsFile(blob, `historial_cierres_caja_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  },
 };

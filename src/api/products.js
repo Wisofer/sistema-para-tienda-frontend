@@ -328,6 +328,15 @@ export const productsApi = {
     const blob = await fetchExportBlob(`${inventarioBase}/movimientos/exportar${q}`);
     downloadBlobAsFile(blob, `movimientos_inventario_${new Date().toISOString().slice(0, 10)}.xlsx`);
   },
+  /**
+   * Excel de inventario (productos con categoría y proveedor). Mismos filtros que GET /productos.
+   * Requiere JWT Administrador.
+   */
+  exportarInventarioProductosExcel: async (params) => {
+    const q = qs(params || {});
+    const blob = await fetchExportBlob(`${base}/exportar${q}`);
+    downloadBlobAsFile(blob, `inventario_productos_${new Date().toISOString().slice(0, 10)}.xlsx`);
+  },
   /** Entrada de stock (Admin). Cuerpo: productoId, productoVarianteId?, cantidad, costoUnitario, proveedorId?, numeroReferencia?, observaciones? */
   entradaStock: (body) => {
     const pl = entradaPayload(body);

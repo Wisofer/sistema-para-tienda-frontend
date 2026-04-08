@@ -27,6 +27,7 @@ export const backofficeApi = {
   createProducto: (body) => productsApi.create(body),
   updateProducto: (id, body) => productsApi.update(id, body),
   deleteProducto: (id) => productsApi.delete(id),
+  exportarInventarioProductosExcel: (params) => productsApi.exportarInventarioProductosExcel(params),
 
   // Caja
   cajaEstado: () => cajaApi.estado(),
@@ -35,6 +36,7 @@ export const backofficeApi = {
   cajaCerrar: (body) => cajaApi.cierre(body),
   cajaCierrePreview: () => cajaApi.cierrePreview(),
   cajaHistorial: (params) => cajaApi.historial(params),
+  exportarCajaHistorialExcel: (params) => cajaApi.exportarHistorialExcel(params),
   cajaDetalleCierre: async (id) => {
     // El backend puede exponer este detalle con distintos paths según versión.
     // Probamos opciones comunes; si falla, devolvemos null y la UI muestra mensaje.

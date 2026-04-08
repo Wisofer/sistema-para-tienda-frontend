@@ -196,6 +196,7 @@ export const localBackofficeApi = {
     throw new Error("Credenciales inválidas (admin/admin)");
   },
   listProductos: productCrud.list, getProducto: productCrud.get, saveProducto: productCrud.save, createProducto: productCrud.save, updateProducto: productCrud.save, deleteProducto: productCrud.delete,
+  exportarInventarioProductosExcel: async () => {},
   listCategorias: categoryCrud.list, getCategoriaProducto: (id) => categoryCrud.get(id), saveCategoria: categoryCrud.save, createCategoria: categoryCrud.save, updateCategoria: categoryCrud.save, deleteCategoria: categoryCrud.delete, catalogoCategorias: async () => storage.get(CATEGORIES_CACHE_KEY), catalogoCategoriasProducto: async () => storage.get(CATEGORIES_CACHE_KEY),
   listProveedores: providerCrud.list, getProveedor: providerCrud.get, saveProveedor: providerCrud.save, createProveedor: providerCrud.save, updateProveedor: providerCrud.save, deleteProveedor: providerCrud.delete, catalogoProveedores: async () => storage.get(PROVIDERS_CACHE_KEY),
   listClientes: clientCrud.list, saveCliente: clientCrud.save, deleteCliente: clientCrud.delete,
@@ -223,7 +224,7 @@ export const localBackofficeApi = {
   },
 
   // Stock
-  entradaStockProducto: async () => ({ success: true }), salidaStockProducto: async () => ({ success: true }), ajusteStockProducto: async () => ({ success: true }), movimientosProducto: async () => ({ items: [] }), movimientosProductos: async () => ({ items: [] }),
+  entradaStockProducto: async () => ({ success: true }), salidaStockProducto: async () => ({ success: true }), ajusteStockProducto: async () => ({ success: true }), movimientosProducto: async () => ({ items: [] }), movimientosProductos: async () => ({ items: [] }), exportarMovimientosInventarioExcel: async () => {},
 
   // Caja
   cajaEstado: async () => storage.get(CAJA_STATE_KEY),
@@ -231,7 +232,8 @@ export const localBackofficeApi = {
   cajaCierre: async () => { const s = { abierta: false, estado: "Cerrado" }; storage.set(CAJA_STATE_KEY, s); return s; },
   cajaCierrePreview: async () => ({ ventasEfectivo: 5000, ventasTarjeta: 0, totalVentas: 5000, montoApertura: 2000 }),
   cajaDetalleCierre: async () => ({ total: 0 }),
-  cajaHistorial: async () => [],
+  cajaHistorial: async () => ({ items: [] }),
+  exportarCajaHistorialExcel: async () => {},
 
   // Venta
   ventasProcesarPago: async (body) => {

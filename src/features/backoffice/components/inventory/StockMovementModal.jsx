@@ -23,6 +23,7 @@ export function StockMovementModal({
   setStockSuggestOpen,
   stockSuggestBlurTimerRef,
   stockAutocompleteList,
+  stockRemoteSearchLoading = false,
   selectedStockProduct,
   stockForm,
   setStockForm,
@@ -46,7 +47,10 @@ export function StockMovementModal({
           {/* Buscador de Producto */}
           <div className="relative">
             <label className="text-xs font-bold text-slate-600 uppercase tracking-widest">
-              Buscar producto (Mín 3 letras)
+              Buscar por nombre o código
+              <span className="ml-1 font-normal normal-case text-slate-400">
+                (desde 2 caracteres se busca en todo el catálogo)
+              </span>
               <div className="relative mt-1">
                 <Search className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                 <input
@@ -67,6 +71,9 @@ export function StockMovementModal({
                   className="w-full rounded-xl border border-slate-300 py-3 pl-10 pr-4 text-sm focus:border-blue-500 focus:outline-none"
                 />
               </div>
+              {stockRemoteSearchLoading && (
+                <p className="mt-1 text-[11px] text-slate-400">Buscando en catálogo…</p>
+              )}
             </label>
 
             {/* Sugerencias de Autocompletado */}
@@ -93,7 +100,10 @@ export function StockMovementModal({
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold text-slate-800">{p.nombre}</p>
                       <p className="text-[10px] text-slate-500 uppercase font-black tracking-tighter">
-                        {p.categoria} • Stock: {p.stock}
+                        {(p.codigo || "").trim()
+                          ? `Cód. ${String(p.codigo).trim()} · `
+                          : ""}
+                        {p.categoriaNombre || p.categoria || "—"} • Stock: {p.stock}
                       </p>
                     </div>
                   </button>

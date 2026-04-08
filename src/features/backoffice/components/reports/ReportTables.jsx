@@ -110,15 +110,26 @@ function StatCard({ title, value }) {
   );
 }
 
+function topProductoCategoria(row) {
+  const c =
+    row.categoria ??
+    row.Categoria ??
+    row.categoriaNombre ??
+    row.nombreCategoria ??
+    "";
+  return String(c).trim() || "—";
+}
+
 function TopProductsTable({ rows, currencySymbol }) {
   return (
     <>
       <h4 className="mb-4 text-base font-bold text-slate-800 uppercase tracking-tight">Top Productos</h4>
       <div className={cn(tableHorizontalScrollClass)}>
-        <table className="min-w-[520px] w-full text-left text-sm">
+        <table className="min-w-[640px] w-full text-left text-sm">
           <thead className={REPORT_THEAD}>
             <tr>
               <th className="px-4 py-3">#</th>
+              <th className="px-4 py-3">Categoría</th>
               <th className="px-4 py-3">Producto</th>
               <th className="px-4 py-3 text-center">Cantidad</th>
               <th className="px-4 py-3 text-right">Total Ventas</th>
@@ -128,6 +139,7 @@ function TopProductsTable({ rows, currencySymbol }) {
             {rows.map((row, i) => (
               <tr key={i} className="hover:bg-slate-50/50">
                 <td className="px-4 py-3 font-bold text-slate-400">#{i + 1}</td>
+                <td className="px-4 py-3 text-slate-600 not-italic">{topProductoCategoria(row)}</td>
                 <td className="px-4 py-3 font-bold text-slate-800 uppercase">{row.nombre || row.producto}</td>
                 <td className="px-4 py-3 text-center font-black text-slate-600">{row.cantidad ?? row.unidades ?? 0}</td>
                 <td className="px-4 py-3 text-right font-black text-blue-600">

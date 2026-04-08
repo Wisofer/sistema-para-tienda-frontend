@@ -39,6 +39,8 @@ export function cierreHistorialTotalVentas(item) {
   const n = pickFirstFiniteNumber(item, [
     "totalVentas",
     "TotalVentas",
+    "totalGeneral",
+    "TotalGeneral",
     "totalVenta",
     "TotalVenta",
     "ventasTotal",
@@ -52,6 +54,8 @@ export function cierreHistorialTotalVentas(item) {
 export function cierreFechaRaw(item) {
   if (!item || typeof item !== "object") return "";
   return (
+    item.fechaHoraCierre ??
+    item.FechaHoraCierre ??
     item.fechaCierre ??
     item.FechaCierre ??
     item.fecha ??

@@ -40,15 +40,30 @@ export function CashierView({ currencySymbol = "C$" }) {
     handleAperturaCaja,
     handleCerrarCaja,
     loadDetalleCierre
-  } = useCashier();
+  } = useCashier(currencySymbol);
 
   // Pantalla de carga inicial
   if (loading) return <BackofficeListSkeletonLoading rows={5} maxWidth="4xl" />;
 
   // Cálculos de resumen (Extraídos para claridad)
-  const totalEfectivo = preview?.totales?.efectivo ?? preview?.efectivo ?? 0;
-  const totalTarjeta = preview?.totales?.tarjeta ?? preview?.tarjeta ?? 0;
-  const totalTransferencia = preview?.totales?.transferencia ?? preview?.transferencia ?? 0;
+  const totalEfectivo =
+    preview?.totales?.totalEfectivo ??
+    preview?.totales?.efectivo ??
+    preview?.totalEfectivo ??
+    preview?.efectivo ??
+    0;
+  const totalTarjeta =
+    preview?.totales?.totalTarjeta ??
+    preview?.totales?.tarjeta ??
+    preview?.totalTarjeta ??
+    preview?.tarjeta ??
+    0;
+  const totalTransferencia =
+    preview?.totales?.totalTransferencia ??
+    preview?.totales?.transferencia ??
+    preview?.totalTransferencia ??
+    preview?.transferencia ??
+    0;
   const totalVentas = preview?.totales?.totalVentasNetas ?? preview?.totalGeneral ?? 0;
   const totalOrdenes = preview?.totales?.totalOrdenesPagadas ?? preview?.totalOrdenes ?? 0;
   const montoInicialActual = preview?.cierre?.montoInicial ?? estado?.caja?.montoInicial ?? 0;
@@ -90,6 +105,7 @@ export function CashierView({ currencySymbol = "C$" }) {
         handleCerrarCaja={handleCerrarCaja}
         processing={processing}
         currencySymbol={currencySymbol}
+        montoEsperadoEnCaja={montoEsperadoCalculado}
       />
 
       {/* 3. Panel de Operaciones (Solo si está abierta) */}
