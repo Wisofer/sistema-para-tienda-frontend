@@ -107,6 +107,7 @@ export function PosView({ currencySymbol = "C$" }) {
           currencySymbol={currencySymbol}
           actionBusy={actionBusy}
           isOnline={isOnline}
+          cajaAbierta={cajaAbierta}
           onRequestMinimize={() => setCartDocked(false)}
         />
       </section>

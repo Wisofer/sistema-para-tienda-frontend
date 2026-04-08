@@ -17,6 +17,7 @@ export function PosCartSidebar({
   currencySymbol,
   actionBusy,
   isOnline = true,
+  cajaAbierta = true,
   /** Solo escritorio: oculta el panel y muestra el botón flotante (más espacio al catálogo). */
   onRequestMinimize,
 }) {
@@ -135,6 +136,16 @@ export function PosCartSidebar({
 
       {/* Resumen de Pago y Checkout */}
       <div className="sticky bottom-0 border-t border-slate-100 bg-white p-3 sm:p-4 lg:rounded-b-2xl">
+        {!cajaAbierta && (
+          <div className="mb-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2">
+            <p className="text-[11px] font-black uppercase tracking-widest text-amber-800">
+              Caja cerrada
+            </p>
+            <p className="mt-0.5 text-[11px] leading-snug text-amber-700">
+              Abre la caja para poder cobrar ventas.
+            </p>
+          </div>
+        )}
         <div className="mb-3 space-y-1">
           <div className="flex justify-between text-[10px] font-bold uppercase tracking-wider text-slate-400">
             <span>Subtotal</span>
@@ -151,7 +162,7 @@ export function PosCartSidebar({
         <button
           type="button"
           onClick={handleCheckout}
-          disabled={cart.length === 0 || actionBusy || !isOnline}
+          disabled={cart.length === 0 || actionBusy || !isOnline || !cajaAbierta}
           title={offlineButtonTitle(isOnline)}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-xs font-black uppercase tracking-wide text-white shadow-md transition-all hover:bg-black active:scale-[0.99] disabled:bg-slate-200 disabled:shadow-none"
         >

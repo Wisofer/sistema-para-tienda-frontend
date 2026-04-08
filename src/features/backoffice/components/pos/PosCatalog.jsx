@@ -49,14 +49,29 @@ export function PosCatalog({
     <div className="grid grid-cols-2 gap-4 pb-24 sm:grid-cols-3 lg:grid-cols-4 lg:pb-8 xl:grid-cols-5 2xl:grid-cols-6">
       {products.map((p) => {
         const sinStock = isProductBlockedByStockForPos(p);
+        const bloqueadoPorCaja = !cajaAbierta;
+        const disabled = bloqueadoPorCaja || actionBusy || sinStock;
         return (
         <button
           key={p.id}
           onClick={() => addToCart(p)}
-          disabled={!cajaAbierta || actionBusy || sinStock}
-          title={sinStock ? "Sin stock disponible" : undefined}
+          disabled={disabled}
+          title={
+            bloqueadoPorCaja
+              ? "Bloqueado por caja cerrada"
+              : sinStock
+              ? "Sin stock disponible"
+              : undefined
+          }
           className="group relative flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 active:scale-[0.96] disabled:opacity-50"
         >
+          {bloqueadoPorCaja && (
+            <div className="absolute inset-0 z-10 rounded-2xl bg-slate-900/5">
+              <div className="absolute left-2 top-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-amber-900 shadow-sm">
+                Bloqueado por caja cerrada
+              </div>
+            </div>
+          )}
           {/* Imagen con Aspect Ratio controlado */}
           <div className="mb-3 aspect-square w-full overflow-hidden rounded-xl bg-slate-50 flex items-center justify-center ring-1 ring-slate-50">
             {p.imagen ? (
