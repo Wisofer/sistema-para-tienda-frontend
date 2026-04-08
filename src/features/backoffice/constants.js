@@ -15,7 +15,6 @@ export const NAV_ITEMS = [
   { id: "dashboard", label: "Dashboard", icon: Home },
   { id: "products", label: "Productos", icon: Package },
   { id: "categories", label: "Categorías", icon: Tag },
-  { id: "providers", label: "Proveedores", icon: Truck },
   { id: "clients", label: "Clientes", icon: Users },
   { id: "pos", label: "Ventas", icon: ShoppingCart },
   { id: "cashier", label: "Caja", icon: SquareTerminal },

@@ -20,7 +20,6 @@ import {
   CashierView,
   DashboardView,
   ProductsView,
-  ProvidersView,
   ReportsView,
   SettingsView,
   UsersView,
@@ -33,7 +32,6 @@ const SIDEBAR_COLLAPSED_KEY = "pos-sidebar-collapsed";
 const TITLES = {
   dashboard: "Dashboard",
   products: "Inventario de productos",
-  providers: "Proveedores",
   clients: "Fidelización de Clientes",
   pos: "Punto de Venta",
   cashier: "Control de Caja",
@@ -235,7 +233,6 @@ export function AuthHome() {
 
   const ActiveView = useMemo(() => {
     if (activeView === "products") return ProductsView;
-    if (activeView === "providers") return ProvidersView;
     if (activeView === "cashier") return CashierView;
     if (activeView === "users") return UsersView;
     if (activeView === "settings") return SettingsView;

@@ -67,7 +67,6 @@ const ALL_VIEWS = [
   "dashboard",
   "products",
   "categories",
-  "providers",
   "clients",
   "pos",
   "cashier",
@@ -84,7 +83,7 @@ export function getAllowedViewIds(user) {
     return ALL_VIEWS;
   }
   if (isCajeroUser(user)) {
-    return ["pos", "products", "categories", "providers", "clients", "cashier"];
+    return ["pos", "products", "categories", "clients", "cashier"];
   }
   return ["pos", "products", "clients"];
 }

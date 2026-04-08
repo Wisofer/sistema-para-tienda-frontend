@@ -33,6 +33,8 @@ export function ProductFormModal({
   if (!modalOpen) return null;
 
   const isEditing = Boolean(form?.id);
+  const providersList = Array.isArray(providers) ? providers : [];
+  const showProvidersField = providersList.length > 0;
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -113,7 +115,12 @@ export function ProductFormModal({
           </label>
 
           {/* Categoría y Proveedor */}
-          <label className="min-w-0 text-xs font-semibold text-slate-600">
+          <label
+            className={cn(
+              "min-w-0 text-xs font-semibold text-slate-600",
+              showProvidersField ? "" : "sm:col-span-2"
+            )}
+          >
             Categoría
             <select
               value={form.categoriaProductoId}
@@ -129,21 +136,23 @@ export function ProductFormModal({
               ))}
             </select>
           </label>
-          <label className="min-w-0 text-xs font-semibold text-slate-600">
-            Proveedor
-            <select
-              value={form.proveedorId}
-              onChange={(e) => setForm((f) => ({ ...f, proveedorId: e.target.value }))}
-              className={productModalFieldClass}
-            >
-              <option value="">Sin proveedor</option>
-              {providers.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.nombre || p.descripcion || `Proveedor ${p.id}`}
-                </option>
-              ))}
-            </select>
-          </label>
+          {showProvidersField && (
+            <label className="min-w-0 text-xs font-semibold text-slate-600">
+              Proveedor
+              <select
+                value={form.proveedorId}
+                onChange={(e) => setForm((f) => ({ ...f, proveedorId: e.target.value }))}
+                className={productModalFieldClass}
+              >
+                <option value="">Sin proveedor</option>
+                {providersList.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.nombre || p.descripcion || `Proveedor ${p.id}`}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
 
           {/* Checkboxes de control (Controlar stock primero: define si se muestran cantidades / talla para variante) */}
           <div className="col-span-full grid grid-cols-1 gap-3 min-[400px]:grid-cols-2 sm:col-span-2">

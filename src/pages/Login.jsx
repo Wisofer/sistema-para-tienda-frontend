@@ -62,7 +62,7 @@ export function Login() {
               Control total de tu inventario y ventas.
             </p>
             <p className="max-w-md text-base text-slate-500">
-              Gestiona productos, clientes, proveedores y caja desde una sola interfaz profesional.
+              Gestiona productos, clientes y caja desde una sola interfaz profesional.
             </p>
           </div>
 
