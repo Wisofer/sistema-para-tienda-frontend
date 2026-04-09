@@ -1,17 +1,12 @@
 import React from "react";
 import { History } from "lucide-react";
+import { BackofficeDialog } from "../index.js";
 import { formatCurrency } from "../../utils/currency.js";
-import {
-  cierreDetalleDiferencia,
-  cierreDetalleMontoEsperado,
-  cierreDetalleMontoReal,
-  cierreFechaRaw,
-  cierreHistorialMontoPrincipal,
-  cierreId,
-} from "../../utils/caja.js";
+import { cierreFechaRaw, cierreHistorialMontoPrincipal, cierreId } from "../../utils/caja.js";
+import { CierreDetallePanel } from "./CierreDetallePanel.jsx";
 
 /**
- * Historial de cierres de caja con detalle modal incrustado.
+ * Historial de cierres de caja; el detalle se abre en modal centrado.
  */
 export function CashierHistory({
   showHistorial,
@@ -22,8 +17,9 @@ export function CashierHistory({
   loadAll,
   loadDetalleCierre,
   cierreDetalle,
+  clearCierreDetalle,
   processing,
-  currencySymbol
+  currencySymbol,
 }) {
   return (
     <>
@@ -110,26 +106,19 @@ export function CashierHistory({
         )}
       </article>
 
-      {/* Detalle Modal (Incrustado) */}
-      {cierreDetalle && (
-        <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h2 className="mb-4 text-sm font-semibold text-slate-900">Detalle del cierre</h2>
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            {[
-              { label: "Monto esperado", value: cierreDetalleMontoEsperado(cierreDetalle), color: "text-slate-900", bg: "bg-slate-50", border: "border-slate-200" },
-              { label: "Monto real", value: cierreDetalleMontoReal(cierreDetalle), color: "text-primary-700", bg: "bg-primary-50", border: "border-primary-200" },
-              { label: "Diferencia", value: cierreDetalleDiferencia(cierreDetalle), color: "text-red-700", bg: "bg-red-50", border: "border-red-200" },
-            ].map((d, i) => (
-              <div key={i} className={`rounded-xl border p-4 ${d.bg} ${d.border}`}>
-                <p className="text-xs font-medium text-slate-500">{d.label}</p>
-                <p className={`mt-1 text-xl font-semibold tabular-nums ${d.color}`}>
-                  {formatCurrency(d.value, currencySymbol)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </article>
-      )}
+      <BackofficeDialog
+        open={Boolean(cierreDetalle)}
+        onClose={() => clearCierreDetalle?.()}
+        maxWidthClass="max-w-2xl"
+      >
+        {cierreDetalle ? (
+          <CierreDetallePanel
+            detalle={cierreDetalle}
+            currencySymbol={currencySymbol}
+            onClose={() => clearCierreDetalle?.()}
+          />
+        ) : null}
+      </BackofficeDialog>
     </>
   );
 }

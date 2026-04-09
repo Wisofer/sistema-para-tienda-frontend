@@ -8,8 +8,15 @@ function nombreClienteRow(c) {
   return String(c?.nombre ?? c?.nombreCompleto ?? c?.Nombre ?? c?.NombreCompleto ?? "").trim() || `Cliente #${c?.id ?? ""}`;
 }
 
+function roundMoney2(n) {
+  const x = Number(n);
+  if (!Number.isFinite(x)) return 0;
+  return Math.round(x * 100) / 100;
+}
+
 /**
  * Modal "Procesar venta": totales, efectivo recibido / vuelto, u otros métodos al total exacto.
+ * Descuento: porcentaje 0–100; el API calcula el monto en C$ (misma regla de redondeo que la UI).
  * No hay pago mixto en UI: Tarjeta/Transferencia fijan el monto al total.
  */
 export function PosProcesarVentaModal({
@@ -24,7 +31,8 @@ export function PosProcesarVentaModal({
   busy = false,
   onGuardar,
 }) {
-  const [descuento, setDescuento] = useState("");
+  /** Porcentaje 0–100 (string para el input). */
+  const [descuentoPct, setDescuentoPct] = useState("");
   const [montoRecibido, setMontoRecibido] = useState("");
   const [tipoPago, setTipoPago] = useState("Efectivo");
   const [moneda, setMoneda] = useState("C$");
@@ -43,14 +51,16 @@ export function PosProcesarVentaModal({
     [lines]
   );
 
-  const descuentoNum = Math.max(0, Number(descuento) || 0);
+  const pctRaw = Number(String(descuentoPct).replace(",", "."));
+  const descuentoPorcentajeNum = Number.isFinite(pctRaw) ? Math.min(100, Math.max(0, pctRaw)) : 0;
 
   const totalDesdeBackend =
     totalOrdenBackend != null && Number.isFinite(Number(totalOrdenBackend)) ? Number(totalOrdenBackend) : null;
-  /** Base imponible: preferimos total del sistema si existe; si no, suma de líneas. Luego restamos descuento. */
+  /** Base imponible: preferimos total del sistema si existe; si no, suma de líneas. */
   const baseAntesDescuento =
     totalDesdeBackend != null && totalDesdeBackend > 0 ? totalDesdeBackend : subtotalLineas;
-  const totalAPagarCordobas = Math.max(0, baseAntesDescuento - descuentoNum);
+  const descuentoMontoCalculado = roundMoney2((baseAntesDescuento * descuentoPorcentajeNum) / 100);
+  const totalAPagarCordobas = Math.max(0, baseAntesDescuento - descuentoMontoCalculado);
   const totalAPagarMoneda = isUsd ? totalAPagarCordobas / tc : totalAPagarCordobas;
 
   const recibidoNum = Number(montoRecibido) || 0;
@@ -60,7 +70,7 @@ export function PosProcesarVentaModal({
 
   useEffect(() => {
     if (!open) return;
-    setDescuento("");
+    setDescuentoPct("");
     setComentario("");
     setTipoPago("Efectivo");
     setMoneda("C$");
@@ -111,7 +121,9 @@ export function PosProcesarVentaModal({
     }
     const cid = clienteId !== "" && clienteId != null ? Number(clienteId) : NaN;
     onGuardar?.({
-      descuento: descuentoNum,
+      descuentoPorcentaje: descuentoPorcentajeNum,
+      /** Monto en C$ coherente con el % (el servidor recalcula desde %). */
+      descuento: descuentoMontoCalculado,
       subtotalLineas,
       totalAPagarCordobas,
       totalAPagarMoneda,
@@ -212,17 +224,27 @@ export function PosProcesarVentaModal({
               <span>{formatCurrency(subtotalLineas, currencySymbol)}</span>
             </div>
             <label className="flex items-center justify-between gap-2 text-left">
-              <span className="text-xs font-medium text-slate-600">Total descuento</span>
+              <span className="text-xs font-medium text-slate-600">Descuento (%)</span>
               <input
                 type="number"
                 min="0"
+                max="100"
                 step="0.01"
-                value={descuento}
-                onChange={(e) => setDescuento(e.target.value)}
+                value={descuentoPct}
+                onChange={(e) => setDescuentoPct(e.target.value)}
                 className="w-28 rounded border border-slate-300 px-2 py-1 text-right text-sm"
                 disabled={blockActions}
+                placeholder="0"
               />
             </label>
+            {descuentoPorcentajeNum > 0 && (
+              <div className="flex justify-between gap-2 text-[11px] text-slate-500">
+                <span>Equiv. descuento (C$)</span>
+                <span className="font-semibold text-slate-600">
+                  −{formatCurrency(descuentoMontoCalculado, currencySymbol)}
+                </span>
+              </div>
+            )}
             {totalDesdeBackend != null && totalDesdeBackend > 0 && Math.abs(totalDesdeBackend - subtotalLineas) > 0.01 && (
               <p className="text-[11px] text-amber-700">
                 Total en sistema: {formatCurrency(totalDesdeBackend, currencySymbol)} (líneas:{" "}

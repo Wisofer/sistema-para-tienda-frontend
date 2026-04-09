@@ -20,7 +20,7 @@ export const ventasApi = {
 
   /**
    * Procesa el pago de una venta pendiente (POS).
-   * @param {Object} body { VentaId, TipoPago, MontoPagado, Moneda: Cordobas|Dolares, ... }
+   * @param {Object} body { VentaId, TipoPago, MontoPagado, Moneda: Cordobas|Dolares, DescuentoPorcentaje?, DescuentoMonto?, ... }
    */
   procesarPago: (body) => api.post(`${base}/procesar-pago`, body),
 

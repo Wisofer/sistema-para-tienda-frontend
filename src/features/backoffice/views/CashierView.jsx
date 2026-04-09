@@ -23,6 +23,7 @@ export function CashierView({ currencySymbol = "C$" }) {
     historialPage,
     historialTotalPages,
     cierreDetalle,
+    clearCierreDetalle,
     error,
     processing,
     loading,
@@ -132,6 +133,7 @@ export function CashierView({ currencySymbol = "C$" }) {
         loadAll={loadAll}
         loadDetalleCierre={loadDetalleCierre}
         cierreDetalle={cierreDetalle}
+        clearCierreDetalle={clearCierreDetalle}
         processing={processing}
         currencySymbol={currencySymbol}
       />

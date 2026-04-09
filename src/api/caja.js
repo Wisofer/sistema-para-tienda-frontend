@@ -16,6 +16,8 @@ export const cajaApi = {
   cierrePreview: (params) => api.get(`${base}/cierre/preview${qs(params || {})}`),
   cierre: (body) => api.post(`${base}/cierre`, body),
   historial: (params) => api.get(`${base}/historial${qs(params)}`),
+  /** Detalle de un cierre por id (mismo payload que el backend expone en cierres/{id}). */
+  detalle: (id) => api.get(`${base}/cierres/${id}`),
   /** Excel de historial de cierres; filtros opcionales desde/hasta (fecha de cierre). */
   exportarHistorialExcel: async (params) => {
     const q = qs(params || {});

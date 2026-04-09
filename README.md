@@ -5,6 +5,8 @@ This template provides a minimal setup to get React working in Vite with HMR and
 ## Documentación del proyecto
 
 - **Reportes y exportación Excel (contrato con el API):** [docs/REPORTES_BACKEND.md](docs/REPORTES_BACKEND.md)
+- **Pagos (efectivo, USD, transferencia) y qué reflejan los reportes:** [docs/PAGOS_Y_REPORTES.md](docs/PAGOS_Y_REPORTES.md)
+- **Caja: API del front, hook `useCashier`, historial, detalle y reporte:** [docs/FRONTEND-CAJA-Y-HISTORIAL.md](docs/FRONTEND-CAJA-Y-HISTORIAL.md)
 
 Currently, two official plugins are available:
 

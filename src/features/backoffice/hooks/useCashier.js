@@ -119,22 +119,32 @@ export function useCashier(currencySymbol = "C$") {
     setError("");
     try {
       const data = await backofficeApi.cajaDetalleCierre(id);
-      setCierreDetalle(data || null);
+      if (!data) {
+        snackbar.error("No se pudo cargar el detalle del cierre.");
+        setCierreDetalle(null);
+        return;
+      }
+      setCierreDetalle(data);
     } catch (err) {
-      setError(err.message || "No se pudo cargar el detalle del cierre.");
+      const msg = err.message || "No se pudo cargar el detalle del cierre.";
+      setError(msg);
+      snackbar.error(msg);
+      setCierreDetalle(null);
     } finally {
       setProcessing(false);
     }
   };
 
+  const clearCierreDetalle = () => setCierreDetalle(null);
+
   return {
     estado, preview, historial, historialPage, historialTotalPages,
-    cierreDetalle, error, processing, loading,
+    cierreDetalle, clearCierreDetalle, error, processing, loading,
     showApertura, setShowApertura,
     showHistorial, setShowHistorial,
     showCierreForm, setShowCierreForm,
     montoInicial, setMontoInicial,
     cierreForm, setCierreForm,
-    loadAll, handleAperturaCaja, handleCerrarCaja, loadDetalleCierre
+    loadAll, handleAperturaCaja, handleCerrarCaja, loadDetalleCierre,
   };
 }

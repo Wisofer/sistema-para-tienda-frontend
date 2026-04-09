@@ -22,4 +22,8 @@ La **carga de tablas** (`loadReportData`) usa los mismos criterios de fechas don
 
 ## Documentación del API
 
-Contrato detallado: repositorio del backend, `docs/API_V1.md` (rutas bajo `/api/v1/reportes`, `/api/v1/caja`, `/api/v1/inventario`).
+Contrato detallado: repositorio del backend (rutas bajo `/api/v1/reportes`, `/api/v1/caja`, `/api/v1/inventario`).
+
+## Pagos y métodos (lectura para producto)
+
+Qué **métodos de pago** existen, qué **muestran los reportes** (neto vs método por ticket) y qué hay en **caja**: ver **[PAGOS_Y_REPORTES.md](./PAGOS_Y_REPORTES.md)**.

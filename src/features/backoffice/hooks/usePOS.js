@@ -525,13 +525,17 @@ export function usePOS(currencySymbol = "C$") {
             ? Number(paymentForm.montoRecibido ?? 0)
             : Number(paymentForm.montoRecibidoCordobas ?? paymentForm.totalAPagarCordobas ?? 0);
 
+        const pct = Number(paymentForm?.descuentoPorcentaje);
+        const pctOk = Number.isFinite(pct) && pct > 0 && pct <= 100;
+
         const payload = {
           VentaId: vid,
           TipoPago: paymentForm.tipoPago,
           MontoPagado: montoPagado,
           Moneda: monedaApi,
           Observaciones: paymentForm.comentario || "Venta Retail",
-          DescuentoMonto: paymentForm.descuento > 0 ? Number(paymentForm.descuento) : 0,
+          /** El API prioriza porcentaje sobre monto fijo. */
+          ...(pctOk ? { DescuentoPorcentaje: pct, DescuentoMonto: 0 } : { DescuentoMonto: 0 }),
         };
         if (tieneCliente) {
           payload.ClienteId = clienteIdVenta;

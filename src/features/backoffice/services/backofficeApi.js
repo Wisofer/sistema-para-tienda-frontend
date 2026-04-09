@@ -37,20 +37,10 @@ export const backofficeApi = {
   cajaCierrePreview: () => cajaApi.cierrePreview(),
   cajaHistorial: (params) => cajaApi.historial(params),
   exportarCajaHistorialExcel: (params) => cajaApi.exportarHistorialExcel(params),
-  cajaDetalleCierre: async (id) => {
-    // El backend puede exponer este detalle con distintos paths según versión.
-    // Probamos opciones comunes; si falla, devolvemos null y la UI muestra mensaje.
+  cajaDetalleCierre: (id) => {
     const cid = id == null ? "" : String(id);
-    if (!cid) return null;
-    try {
-      return await api.get(`/api/v1/caja/cierres/${cid}`);
-    } catch {
-      try {
-        return await api.get(`/api/v1/caja/historial/${cid}`);
-      } catch {
-        return null;
-      }
-    }
+    if (!cid) return Promise.resolve(null);
+    return cajaApi.detalle(cid);
   },
 
   // POS & Venta

@@ -3,11 +3,14 @@ import { Eye, Search, X } from "lucide-react";
 import { cn } from "../../../../utils/cn.js";
 import { formatCurrency } from "../../utils/currency.js";
 import { tableHorizontalScrollClass } from "../../utils/modalResponsiveClasses.js";
-import { 
-  cierreFechaRaw, 
-  cierreHistorialMontoPrincipal, 
-  cierreHistorialTotalVentas, 
-  cierreId 
+import {
+  cierreFechaRaw,
+  cierreHistorialDiferencia,
+  cierreHistorialMontoInicial,
+  cierreHistorialMontoEsperado,
+  cierreHistorialMontoReal,
+  cierreHistorialTotalVentas,
+  cierreId,
 } from "../../utils/caja.js";
 
 /** Cabecera de tabla: clara y legible (evita la “barra negra” de bg-slate-900). */
@@ -252,34 +255,60 @@ function CajaTable({ rows, currencySymbol }) {
     <>
       <h4 className="mb-4 text-base font-bold text-slate-800 uppercase tracking-tight">Historial de Caja</h4>
       <div className={cn(tableHorizontalScrollClass)}>
-        <table className="min-w-[640px] w-full text-left text-sm">
+        <table className="min-w-[980px] w-full text-left text-sm">
           <thead className={REPORT_THEAD}>
             <tr>
-              <th className="px-4 py-3">Cierre</th>
-              <th className="px-4 py-3">Fecha</th>
-              <th className="px-4 py-3">Estado</th>
-              <th className="px-4 py-3 text-right">Arqueo Real</th>
-              <th className="px-4 py-3 text-right">Monto Ventas</th>
+              <th className="px-3 py-3">Cierre</th>
+              <th className="px-3 py-3">Fecha</th>
+              <th className="px-3 py-3">Estado</th>
+              <th className="px-3 py-3 text-right">Apertura</th>
+              <th className="px-3 py-3 text-right">Ventas</th>
+              <th className="px-3 py-3 text-right">Esperado</th>
+              <th className="px-3 py-3 text-right">Contado</th>
+              <th className="px-3 py-3 text-right">Diferencia</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium italic">
-            {rows.map((row, i) => (
-              <tr key={i} className="hover:bg-slate-50/50">
-                <td className="px-4 py-3 font-bold text-slate-400">#{cierreId(row) ?? "-"}</td>
-                <td className="px-4 py-3 text-[11px] font-bold text-slate-500 uppercase">{String(cierreFechaRaw(row) || "-").slice(0, 10)}</td>
-                <td className="px-4 py-3">
+            {rows.map((row, i) => {
+              const diff = cierreHistorialDiferencia(row);
+              const real = cierreHistorialMontoReal(row);
+              const diffClass =
+                diff == null
+                  ? "text-slate-500"
+                  : diff < 0
+                    ? "text-red-600"
+                    : diff > 0
+                      ? "text-emerald-700"
+                      : "text-slate-700";
+              return (
+                <tr key={i} className="hover:bg-slate-50/50">
+                  <td className="px-3 py-3 font-bold text-slate-400">#{cierreId(row) ?? "-"}</td>
+                  <td className="px-3 py-3 text-[11px] font-bold text-slate-500 uppercase">
+                    {String(cierreFechaRaw(row) || "-").slice(0, 10)}
+                  </td>
+                  <td className="px-3 py-3">
                     <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[9px] font-black uppercase text-slate-600">
-                        {row.estado || row.Estado || "-"}
+                      {row.estado || row.Estado || "-"}
                     </span>
-                </td>
-                <td className="px-4 py-3 text-right font-bold text-slate-700">
-                  {formatCurrency(cierreHistorialMontoPrincipal(row), currencySymbol)}
-                </td>
-                <td className="px-4 py-3 text-right font-black text-blue-600">
-                  {formatCurrency(cierreHistorialTotalVentas(row), currencySymbol)}
-                </td>
-              </tr>
-            ))}
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-slate-700">
+                    {formatCurrency(cierreHistorialMontoInicial(row), currencySymbol)}
+                  </td>
+                  <td className="px-3 py-3 text-right font-black text-blue-600">
+                    {formatCurrency(cierreHistorialTotalVentas(row), currencySymbol)}
+                  </td>
+                  <td className="px-3 py-3 text-right font-semibold text-slate-700">
+                    {formatCurrency(cierreHistorialMontoEsperado(row), currencySymbol)}
+                  </td>
+                  <td className="px-3 py-3 text-right font-bold text-slate-800">
+                    {real == null ? "—" : formatCurrency(real, currencySymbol)}
+                  </td>
+                  <td className={`px-3 py-3 text-right font-black tabular-nums ${diffClass}`}>
+                    {diff == null ? "—" : formatCurrency(diff, currencySymbol)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
