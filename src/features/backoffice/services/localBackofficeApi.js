@@ -215,7 +215,18 @@ export const localBackofficeApi = {
     const series = [ { label: "2026-01-01", total: seriesMap["01"] }, { label: "2026-02-01", total: seriesMap["02"] }, { label: "2026-03-01", total: seriesMap["03"] }, { label: "2026-04-01", total: seriesMap["04"] } ];
     return {
       kpis: { totalOrdenesHoy: todaysSales.length, totalVentasHoy: totalVentasHoy, ticketPromedioHoy: todaysSales.length > 0 ? totalVentasHoy / todaysSales.length : 0, ventasMes: ventasMesActual, ventasSemana: ventasMesActual * 0.3, totalCajaHoy: 2000 + totalVentasHoy },
-      topProductos: products.slice(0, 5).map(p => ({ nombre: p.nombre, cantidad: Math.floor(Math.random() * 50) + 10, venta: p.precioVenta * 10 })).sort((a,b) => b.venta - a.venta),
+      topProductos: products.slice(0, 5).map((p, idx) => ({
+        nombre: p.nombre,
+        productoId: p.id,
+        cantidad: Math.floor(Math.random() * 50) + 10,
+        venta: p.precioVenta * 10,
+        desglosePorFormaPago: idx === 0
+          ? [
+              { metodoPago: "Efectivo", moneda: "Córdobas (C$)", cantidadUnidades: 8, montoCordobas: 800 },
+              { metodoPago: "Tarjeta", moneda: "Córdobas (C$)", cantidadUnidades: 2, montoCordobas: 200 },
+            ]
+          : [],
+      })).sort((a,b) => b.venta - a.venta),
       serieVentas: series,
       ventasPorCategoria: MOCK_CATEGORIES.map(c => ({ nombreCategoria: c.nombre, total: Math.random() * 5000 + 1000 })),
       productosStockBajoLista: products.filter(p => p.stock <= p.stockMinimo),

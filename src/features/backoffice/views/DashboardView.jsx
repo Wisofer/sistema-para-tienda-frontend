@@ -1,4 +1,13 @@
-import { CircleDollarSign, ClipboardList, Clock3, ShoppingBag, Sparkles, BarChart3 } from "lucide-react";
+import {
+  BarChart3,
+  ChevronDown,
+  ChevronRight,
+  CircleDollarSign,
+  ClipboardList,
+  Clock3,
+  ShoppingBag,
+  Sparkles,
+} from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   Bar,
@@ -16,6 +25,10 @@ import {
 import { backofficeApi } from "../services/backofficeApi.js";
 import { BackofficePageShell, BackofficeStatCardsListSkeleton } from "../components/index.js";
 import { formatCurrency } from "../utils/currency.js";
+import {
+  productoTopDesgloseLineaFormato,
+  productoTopDesglosePorFormaPago,
+} from "../utils/reportUtils.js";
 
 const icons = [ClipboardList, BarChart3, CircleDollarSign, Clock3];
 const TOP_PRODUCTS_LIMIT = 3;
@@ -52,6 +65,7 @@ export function DashboardView({ currencySymbol = "C$" }) {
   const [rangeLabel, setRangeLabel] = useState("");
   const [monthRevenue, setMonthRevenue] = useState(0);
   const [weekRevenue, setWeekRevenue] = useState(0);
+  const [topProductsOpen, setTopProductsOpen] = useState(() => new Set());
 
   useEffect(() => {
     let mounted = true;
@@ -82,12 +96,18 @@ export function DashboardView({ currencySymbol = "C$" }) {
         const hastaLabel = String(rango?.hasta || "").slice(0, 10);
         setRangeLabel(desdeLabel && hastaLabel ? `${desdeLabel} - ${hastaLabel}` : "Rango por defecto");
 
+        setTopProductsOpen(new Set());
         setTopProducts(
-          topItems.slice(0, TOP_PRODUCTS_LIMIT).map((x) => ({
-            name: x.producto || x.nombre || "Producto",
-            sold: x.cantidad || 0,
-            amount: formatCurrency(x.venta || x.total || 0, currencySymbol),
-          }))
+          topItems.slice(0, TOP_PRODUCTS_LIMIT).map((x, i) => {
+            const name = x.producto || x.nombre || x.productoNombre || "Producto";
+            return {
+              key: `${x.productoId ?? x.ProductoId ?? "p"}-${i}`,
+              name,
+              sold: x.cantidad ?? x.Cantidad ?? x.unidades ?? 0,
+              amount: formatCurrency(x.venta || x.total || x.Total || 0, currencySymbol),
+              desglose: productoTopDesglosePorFormaPago(x),
+            };
+          })
         );
         setSalesByCategory(
           categoriasItems.slice(0, 4).map((c) => ({
@@ -167,6 +187,15 @@ export function DashboardView({ currencySymbol = "C$" }) {
   }, [currencySymbol]);
 
   const safeProducts = useMemo(() => topProducts.slice(0, TOP_PRODUCTS_LIMIT), [topProducts]);
+
+  const toggleTopProductDesglose = (key) => {
+    setTopProductsOpen((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  };
   const statsByTitle = useMemo(() => {
     const m = new Map();
     (stats || []).forEach((s) => {
@@ -264,29 +293,71 @@ export function DashboardView({ currencySymbol = "C$" }) {
         {/* Misma altura visual: top productos | resumen del día (claves KPI alineadas con la fila superior) */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-2 lg:items-stretch">
           <article className="flex min-h-[260px] flex-col rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex shrink-0 items-center gap-2 border-b border-slate-100 pb-3">
-              <Sparkles className="h-5 w-5 shrink-0 text-amber-500" />
-              <h2 className="text-base font-semibold text-slate-800">Productos más vendidos</h2>
+            <div className="mb-3 shrink-0 space-y-1 border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 shrink-0 text-amber-500" />
+                <h2 className="text-base font-semibold text-slate-800">Productos más vendidos</h2>
+              </div>
+              <p className="pl-7 text-[11px] leading-snug text-slate-500">
+                La flecha muestra el desglose por método y moneda cuando el servidor lo envía.
+              </p>
             </div>
             <div className="flex min-h-0 flex-1 flex-col gap-2">
               {safeProducts.length === 0 ? (
                 <p className="text-sm text-slate-500">Sin datos de productos.</p>
               ) : (
-                safeProducts.map((product) => (
-                  <div
-                    key={product.name}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 bg-slate-50/80 px-3 py-2.5"
-                  >
-                    <div className="flex min-w-0 items-center gap-2">
-                      <ShoppingBag className="h-4 w-4 shrink-0 text-slate-400" />
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-slate-800">{product.name}</p>
-                        <p className="text-xs text-slate-500">{product.sold} vendidos</p>
+                safeProducts.map((product) => {
+                  const hasDesglose = product.desglose?.length > 0;
+                  const isOpen = topProductsOpen.has(product.key);
+                  return (
+                    <div key={product.key} className="overflow-hidden rounded-lg border border-slate-100 bg-slate-50/80">
+                      <div className="flex items-center justify-between gap-2 px-2 py-2 sm:px-3 sm:py-2.5">
+                        <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
+                          {hasDesglose ? (
+                            <button
+                              type="button"
+                              onClick={() => toggleTopProductDesglose(product.key)}
+                              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                              aria-expanded={isOpen}
+                              aria-label={
+                                isOpen ? "Ocultar desglose por forma de pago" : "Ver desglose por forma de pago"
+                              }
+                            >
+                              {isOpen ? (
+                                <ChevronDown className="h-4 w-4" aria-hidden />
+                              ) : (
+                                <ChevronRight className="h-4 w-4" aria-hidden />
+                              )}
+                            </button>
+                          ) : (
+                            <span className="inline-flex w-8 shrink-0 justify-center" aria-hidden>
+                              <ShoppingBag className="h-4 w-4 text-slate-400" />
+                            </span>
+                          )}
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-slate-800">{product.name}</p>
+                            <p className="text-xs text-slate-500">{product.sold} vendidos</p>
+                          </div>
+                        </div>
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-800">{product.amount}</span>
                       </div>
+                      {hasDesglose && isOpen ? (
+                        <div className="border-t border-slate-100 bg-white/90 px-3 py-2 pl-11">
+                          <p className="mb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                            Por forma de pago
+                          </p>
+                          <ul className="space-y-1 text-[11px] leading-snug text-slate-700">
+                            {product.desglose.map((d, j) => (
+                              <li key={j} className="border-l-2 border-primary-300 pl-2">
+                                {productoTopDesgloseLineaFormato(d, currencySymbol)}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      ) : null}
                     </div>
-                    <span className="shrink-0 text-sm font-semibold tabular-nums text-slate-800">{product.amount}</span>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </article>
