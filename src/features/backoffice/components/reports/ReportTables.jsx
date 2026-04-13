@@ -12,6 +12,7 @@ import {
   cierreHistorialTotalVentas,
   cierreId,
 } from "../../utils/caja.js";
+import { reporteMetodoPagoLabel, reporteMonedaLabel } from "../../utils/reportUtils.js";
 
 /** Cabecera de tabla: clara y legible (evita la “barra negra” de bg-slate-900). */
 const REPORT_THEAD =
@@ -375,7 +376,9 @@ function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelV
     return orders.filter((o) => {
       const num = String(o.numero ?? "").toLowerCase();
       const idStr = o.sourceId != null ? String(o.sourceId) : "";
-      return num.includes(q) || idStr.includes(q);
+      const met = String(o.metodoPago ?? "").toLowerCase();
+      const mon = String(o.moneda ?? "").toLowerCase();
+      return num.includes(q) || idStr.includes(q) || met.includes(q) || mon.includes(q);
     });
   }, [orders, ticketSearch]);
 
@@ -411,13 +414,15 @@ function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelV
         </p>
       ) : (
         <div className={cn(tableHorizontalScrollClass)}>
-          <table className="min-w-[920px] w-full text-left text-sm">
+          <table className="min-w-[1100px] w-full text-left text-sm">
             <thead className={REPORT_THEAD}>
               <tr>
                 <th className="px-4 py-3">Ticket</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3">Fecha</th>
                 <th className="px-4 py-3">Cliente / ref.</th>
+                <th className="px-4 py-3">Método pago</th>
+                <th className="px-4 py-3">Moneda</th>
                 <th className="px-4 py-3 text-center">Productos</th>
                 <th className="px-4 py-3 text-right">Subtotal</th>
                 <th className="px-4 py-3 text-right">Total neto</th>
@@ -449,6 +454,12 @@ function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelV
                     {String(o.fecha || "").slice(0, 10)}
                   </td>
                   <td className="px-4 py-3 not-italic">{o.referencia}</td>
+                  <td className="px-4 py-3 not-italic text-slate-800">
+                    {reporteMetodoPagoLabel(o.metodoPago)}
+                  </td>
+                  <td className="px-4 py-3 not-italic text-slate-700">
+                    {reporteMonedaLabel(o.moneda)}
+                  </td>
                   <td className="px-4 py-3 text-center font-semibold not-italic text-slate-700">
                     {o.cantidadLineas != null ? o.cantidadLineas : "—"}
                   </td>

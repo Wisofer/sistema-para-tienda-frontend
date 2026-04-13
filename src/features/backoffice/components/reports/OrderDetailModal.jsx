@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { X } from "lucide-react";
 import { formatCurrency } from "../../utils/currency.js";
+import { reporteMetodoPagoLabel, reporteMonedaLabel } from "../../utils/reportUtils.js";
 import { VentaCancelacionModal } from "./VentaCancelacionModal.jsx";
 
 function estadoEsAnulado(estado) {
@@ -111,6 +112,19 @@ export function OrderDetailModal({
                   <p className="font-bold text-slate-900">{order.fecha || "-"}</p>
                 </div>
               </div>
+
+              {order.kind === "ticket" && (
+                <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-100 bg-white p-3 text-xs sm:grid-cols-2">
+                  <div>
+                    <p className="font-black text-slate-400 uppercase tracking-widest">Método de pago</p>
+                    <p className="font-bold text-slate-900">{reporteMetodoPagoLabel(order.metodoPago)}</p>
+                  </div>
+                  <div>
+                    <p className="font-black text-slate-400 uppercase tracking-widest">Moneda</p>
+                    <p className="font-bold text-slate-900">{reporteMonedaLabel(order.moneda)}</p>
+                  </div>
+                </div>
+              )}
 
               {order.kind === "ticket" && (
                 <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-100 bg-white p-3 text-xs sm:grid-cols-4">

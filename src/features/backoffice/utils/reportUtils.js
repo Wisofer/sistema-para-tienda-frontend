@@ -107,6 +107,18 @@ export function reporteCategoriaMonto(row) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Etiqueta UI para método de pago en reportes (vacío → —). */
+export function reporteMetodoPagoLabel(v) {
+  const s = v != null ? String(v).trim() : "";
+  return s || "—";
+}
+
+/** Etiqueta UI para moneda legible en reportes (vacío/null → —). */
+export function reporteMonedaLabel(v) {
+  const s = v != null ? String(v).trim() : "";
+  return s || "—";
+}
+
 /**
  * Normaliza la respuesta de GET /reportes/ventas/{id}/ticket-detalle para el modal de detalle.
  */
@@ -121,6 +133,8 @@ export function normalizeReporteTicketDetalle(raw) {
       numero: "-",
       fecha: "",
       estado: "",
+      metodoPago: "",
+      moneda: null,
       items: [],
       total: 0,
       subtotalLineas: 0,
@@ -185,6 +199,9 @@ export function normalizeReporteTicketDetalle(raw) {
 
   const subtotalLineas = Number(d.subtotalLineas ?? d.SubtotalLineas ?? 0);
   const totalCobrado = Number(d.totalCobrado ?? d.TotalCobrado ?? d.total ?? d.Total ?? 0);
+  const monedaRaw = d.moneda ?? d.Moneda;
+  const monedaStr =
+    monedaRaw != null && String(monedaRaw).trim() !== "" ? String(monedaRaw).trim() : null;
 
   return {
     kind: "ticket",
@@ -193,6 +210,8 @@ export function normalizeReporteTicketDetalle(raw) {
       d.numeroTicket ?? d.NumeroTicket ?? d.numero ?? d.Numero ?? d.ticket ?? d.Ticket ?? "-",
     fecha: d.fecha ?? d.Fecha ?? "",
     estado: d.estado ?? d.Estado ?? "",
+    metodoPago: String(d.metodoPago ?? d.MetodoPago ?? "").trim(),
+    moneda: monedaStr,
     clienteNombre:
       d.cliente ?? d.Cliente ?? d.clienteNombre ?? d.ClienteNombre ?? "",
     subtotalLineas,

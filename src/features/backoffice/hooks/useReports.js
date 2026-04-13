@@ -82,6 +82,8 @@ export function useReports(currencySymbol = "C$") {
             cantidadLineas: o.cantidadLineas ?? o.CantidadLineas,
             subtotalLineas: o.subtotalLineas ?? o.SubtotalLineas,
             estado: String(o.estado ?? o.Estado ?? "").trim() || "—",
+            metodoPago: o.metodoPago ?? o.MetodoPago ?? "",
+            moneda: o.moneda ?? o.Moneda ?? null,
             fechaUltimaActualizacion:
               o.fechaUltimaActualizacion ?? o.FechaUltimaActualizacion ?? null,
           }))
