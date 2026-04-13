@@ -6,8 +6,6 @@ import {
   CircleDollarSign,
   History,
 } from "lucide-react";
-import { formatCurrency } from "./currency.js";
-
 /**
  * Catálogo de reportes disponibles en el sistema.
  */
@@ -118,36 +116,6 @@ export function reporteMetodoPagoLabel(v) {
 export function reporteMonedaLabel(v) {
   const s = v != null ? String(v).trim() : "";
   return s || "—";
-}
-
-/**
- * Desglose por método/moneda en GET /reportes/productos-top (ProductoTopReporte.desglosePorFormaPago).
- */
-export function productoTopDesglosePorFormaPago(row) {
-  const r = row || {};
-  const raw = r.desglosePorFormaPago ?? r.DesglosePorFormaPago;
-  if (!Array.isArray(raw) || raw.length === 0) return [];
-  return raw.map((d) => {
-    const u = Number(d.cantidadUnidades ?? d.CantidadUnidades ?? 0);
-    const m = Number(d.montoCordobas ?? d.MontoCordobas ?? 0);
-    const monRaw = d.moneda ?? d.Moneda;
-    return {
-      metodoPago: String(d.metodoPago ?? d.MetodoPago ?? "").trim(),
-      moneda:
-        monRaw != null && String(monRaw).trim() !== "" ? String(monRaw).trim() : null,
-      cantidadUnidades: Number.isFinite(u) ? u : 0,
-      montoCordobas: Number.isFinite(m) ? m : 0,
-    };
-  });
-}
-
-/** Una línea legible del desglose (dashboard y reporte Top productos). */
-export function productoTopDesgloseLineaFormato(d, currencySymbol = "C$") {
-  const met = reporteMetodoPagoLabel(d.metodoPago);
-  const mon = reporteMonedaLabel(d.moneda);
-  const n = Number(d.cantidadUnidades ?? 0);
-  const ud = n === 1 ? "ud" : "uds";
-  return `${met} · ${mon}: ${n} ${ud} / ${formatCurrency(d.montoCordobas ?? 0, currencySymbol)}`;
 }
 
 /**

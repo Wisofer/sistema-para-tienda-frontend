@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight, Eye, Search, X } from "lucide-react";
+import { Eye, Search, X } from "lucide-react";
 import { cn } from "../../../../utils/cn.js";
 import { formatCurrency } from "../../utils/currency.js";
 import { tableHorizontalScrollClass } from "../../utils/modalResponsiveClasses.js";
@@ -12,12 +12,7 @@ import {
   cierreHistorialTotalVentas,
   cierreId,
 } from "../../utils/caja.js";
-import {
-  productoTopDesgloseLineaFormato,
-  productoTopDesglosePorFormaPago,
-  reporteMetodoPagoLabel,
-  reporteMonedaLabel,
-} from "../../utils/reportUtils.js";
+import { reporteMetodoPagoLabel, reporteMonedaLabel } from "../../utils/reportUtils.js";
 
 /** Cabecera de tabla: clara y legible (evita la “barra negra” de bg-slate-900). */
 const REPORT_THEAD =
@@ -130,31 +125,13 @@ function topProductoCategoria(row) {
 }
 
 function TopProductsTable({ rows, currencySymbol }) {
-  const [openRows, setOpenRows] = useState(() => new Set());
-
-  const toggleRow = (key) => {
-    setOpenRows((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
   return (
     <>
-      <div className="mb-4 space-y-1">
-        <h4 className="text-base font-bold text-slate-800 uppercase tracking-tight">Top Productos</h4>
-        <p className="text-xs text-slate-500">
-          Totales del período. Usa la flecha para ver el <strong>desglose por método y moneda</strong> (mismos importes en
-          córdobas que el Excel «Por forma de pago»).
-        </p>
-      </div>
+      <h4 className="mb-4 text-base font-bold text-slate-800 uppercase tracking-tight">Top Productos</h4>
       <div className={cn(tableHorizontalScrollClass)}>
-        <table className="min-w-[720px] w-full text-left text-sm">
+        <table className="min-w-[640px] w-full text-left text-sm">
           <thead className={REPORT_THEAD}>
             <tr>
-              <th className="w-10 px-2 py-3" aria-label="Desplegar desglose" />
               <th className="px-4 py-3">#</th>
               <th className="px-4 py-3">Categoría</th>
               <th className="px-4 py-3">Producto</th>
@@ -163,65 +140,17 @@ function TopProductsTable({ rows, currencySymbol }) {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 font-medium italic">
-            {rows.map((row, i) => {
-              const rowKey = `${row.productoId ?? row.ProductoId ?? "p"}-${i}`;
-              const desglose = productoTopDesglosePorFormaPago(row);
-              const hasDesglose = desglose.length > 0;
-              const isOpen = openRows.has(rowKey);
-              const nombre = row.nombre ?? row.producto ?? row.ProductoNombre ?? "—";
-              return (
-                <React.Fragment key={rowKey}>
-                  <tr className="hover:bg-slate-50/50">
-                    <td className="px-2 py-3 align-middle not-italic">
-                      {hasDesglose ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleRow(rowKey)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                          aria-expanded={isOpen}
-                          aria-label={isOpen ? "Ocultar desglose por forma de pago" : "Ver desglose por forma de pago"}
-                        >
-                          {isOpen ? (
-                            <ChevronDown className="h-4 w-4" aria-hidden />
-                          ) : (
-                            <ChevronRight className="h-4 w-4" aria-hidden />
-                          )}
-                        </button>
-                      ) : (
-                        <span className="inline-block w-8" aria-hidden />
-                      )}
-                    </td>
-                    <td className="px-4 py-3 font-bold text-slate-400">#{i + 1}</td>
-                    <td className="px-4 py-3 text-slate-600 not-italic">{topProductoCategoria(row)}</td>
-                    <td className="px-4 py-3 font-bold uppercase text-slate-800 not-italic">{nombre}</td>
-                    <td className="px-4 py-3 text-center font-black text-slate-600 not-italic">
-                      {row.cantidad ?? row.unidades ?? row.Cantidad ?? 0}
-                    </td>
-                    <td className="px-4 py-3 text-right font-black text-blue-600 not-italic">
-                      {formatCurrency(row.venta ?? row.total ?? row.Total ?? 0, currencySymbol)}
-                    </td>
-                  </tr>
-                  {hasDesglose && isOpen ? (
-                    <tr className="bg-slate-50/90">
-                      <td colSpan={6} className="px-4 py-3 pl-12 not-italic">
-                        <p className="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                          Por forma de pago
-                        </p>
-                        <ul className="space-y-1.5 text-xs text-slate-700">
-                          {desglose.map((d, j) => (
-                            <li key={j} className="flex flex-wrap gap-x-2 border-l-2 border-primary-300 pl-3">
-                              <span className="font-medium text-slate-800">
-                                {productoTopDesgloseLineaFormato(d, currencySymbol)}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </td>
-                    </tr>
-                  ) : null}
-                </React.Fragment>
-              );
-            })}
+            {rows.map((row, i) => (
+              <tr key={i} className="hover:bg-slate-50/50">
+                <td className="px-4 py-3 font-bold text-slate-400">#{i + 1}</td>
+                <td className="px-4 py-3 text-slate-600 not-italic">{topProductoCategoria(row)}</td>
+                <td className="px-4 py-3 font-bold text-slate-800 uppercase">{row.nombre || row.producto}</td>
+                <td className="px-4 py-3 text-center font-black text-slate-600">{row.cantidad ?? row.unidades ?? 0}</td>
+                <td className="px-4 py-3 text-right font-black text-blue-600">
+                  {formatCurrency(row.venta ?? row.total ?? 0, currencySymbol)}
+                </td>
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
