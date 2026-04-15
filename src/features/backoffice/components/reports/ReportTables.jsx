@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { Eye, Search, X } from "lucide-react";
 import { cn } from "../../../../utils/cn.js";
 import { formatCurrency } from "../../utils/currency.js";
@@ -17,6 +17,9 @@ import { reporteMetodoPagoLabel, reporteMonedaLabel } from "../../utils/reportUt
 /** Cabecera de tabla: clara y legible (evita la “barra negra” de bg-slate-900). */
 const REPORT_THEAD =
   "border-b border-slate-200 bg-slate-100 text-xs font-semibold uppercase tracking-wide text-slate-600";
+
+/** Filas por página en el reporte de ventas (lista de tickets). */
+const VENTAS_REPORT_PAGE_SIZE = 25;
 
 /**
  * Contenedor dinámico que renderiza la tabla correcta según el tipo de reporte.
@@ -369,6 +372,7 @@ function MovimientosTable({ rows }) {
 
 function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelVenta }) {
   const [ticketSearch, setTicketSearch] = useState("");
+  const [ventasPage, setVentasPage] = useState(1);
 
   const filteredOrders = useMemo(() => {
     const q = String(ticketSearch || "").trim().toLowerCase();
@@ -381,6 +385,25 @@ function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelV
       return num.includes(q) || idStr.includes(q) || met.includes(q) || mon.includes(q);
     });
   }, [orders, ticketSearch]);
+
+  const ventasTotalPages = Math.max(1, Math.ceil(filteredOrders.length / VENTAS_REPORT_PAGE_SIZE));
+
+  useEffect(() => {
+    setVentasPage(1);
+  }, [ticketSearch]);
+
+  useEffect(() => {
+    setVentasPage((p) => Math.min(Math.max(1, p), ventasTotalPages));
+  }, [ventasTotalPages]);
+
+  const paginatedVentas = useMemo(() => {
+    const start = (ventasPage - 1) * VENTAS_REPORT_PAGE_SIZE;
+    return filteredOrders.slice(start, start + VENTAS_REPORT_PAGE_SIZE);
+  }, [filteredOrders, ventasPage]);
+
+  const ventasRangeStart =
+    filteredOrders.length === 0 ? 0 : (ventasPage - 1) * VENTAS_REPORT_PAGE_SIZE + 1;
+  const ventasRangeEnd = Math.min(ventasPage * VENTAS_REPORT_PAGE_SIZE, filteredOrders.length);
 
   return (
     <>
@@ -413,6 +436,44 @@ function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelV
           No hay tickets que coincidan con «{ticketSearch.trim()}». Prueba otro número o borra el filtro.
         </p>
       ) : (
+        <>
+        {filteredOrders.length > 0 ? (
+          <div className="mb-3 flex flex-col gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs text-slate-600">
+              Mostrando{" "}
+              <span className="font-semibold tabular-nums text-slate-800">
+                {ventasRangeStart}–{ventasRangeEnd}
+              </span>{" "}
+              de <span className="font-semibold tabular-nums text-slate-800">{filteredOrders.length}</span> tickets
+              {ventasTotalPages > 1 ? (
+                <>
+                  {" "}
+                  · Página {ventasPage} de {ventasTotalPages}
+                </>
+              ) : null}
+            </p>
+            {ventasTotalPages > 1 ? (
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setVentasPage((p) => Math.max(1, p - 1))}
+                  disabled={ventasPage <= 1}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Anterior
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVentasPage((p) => Math.min(ventasTotalPages, p + 1))}
+                  disabled={ventasPage >= ventasTotalPages}
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Siguiente
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
         <div className={cn(tableHorizontalScrollClass)}>
           <table className="min-w-[1100px] w-full text-left text-sm">
             <thead className={REPORT_THEAD}>
@@ -430,7 +491,7 @@ function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelV
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 font-medium italic">
-              {filteredOrders.map((o) => {
+              {paginatedVentas.map((o) => {
                 const est = String(o.estado || "").toLowerCase();
                 const esAnulada = est.includes("anulad");
                 return (
@@ -499,6 +560,7 @@ function VentasTable({ orders, currencySymbol, openOrderDetail, onRequestCancelV
             </tbody>
           </table>
         </div>
+        </>
       )}
     </>
   );

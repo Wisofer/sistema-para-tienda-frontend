@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { backofficeApi } from "../services/backofficeApi.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { PAGINATION } from "../constants/pagination.js";
-import { POS_INVENTORY_UPDATED_EVENT } from "../constants/posEvents.js";
+import { POS_EXCHANGE_RATE_UPDATED_EVENT, POS_INVENTORY_UPDATED_EVENT } from "../constants/posEvents.js";
 import {
   extractPosOrdenResponseId,
   extractVentaIdFromPayment,
@@ -44,6 +44,7 @@ import { useOnlineStatus } from "../../../hooks/useOnlineStatus.js";
 import { NETWORK_UI } from "../../../constants/networkUi.js";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
 import { isNormalUser } from "../utils/auth.js";
+import { DEFAULT_TIPO_CAMBIO_USD, parseTipoCambioApiResponse } from "../utils/currency.js";
 
 /**
  * Hook personalizado para manejar la lógica del Punto de Venta (POS).
@@ -64,7 +65,7 @@ export function usePOS(currencySymbol = "C$") {
   const [searchResultsProducts, setSearchResultsProducts] = useState(null);
   const [catalogSearchLoading, setCatalogSearchLoading] = useState(false);
   const [cart, setCart] = useState([]);
-  const [exchangeRate, setExchangeRate] = useState(36.8);
+  const [exchangeRate, setExchangeRate] = useState(DEFAULT_TIPO_CAMBIO_USD);
   const [actionBusy, setActionBusy] = useState(false);
   const [mobileTab, setMobileTab] = useState("products"); // "products" | "cart"
 
@@ -98,10 +99,11 @@ export function usePOS(currencySymbol = "C$") {
           ? Promise.resolve({ abierta: true })
           : backofficeApi.cajaEstado().catch(() => ({ abierta: true })),
         fetchPosProductosYCategorias(backofficeApi, PAGINATION.POS_PRODUCTOS),
-        backofficeApi.configuracionTipoCambio().catch(() => ({ valor: 36.8 })),
+        backofficeApi.configuracionTipoCambio().catch(() => null),
       ]);
 
-      setExchangeRate(Number(tc?.tipoCambioDolar ?? tc?.TipoCambioDolar ?? tc?.valor ?? 36.8));
+      const tcNum = parseTipoCambioApiResponse(tc);
+      setExchangeRate(tcNum ?? DEFAULT_TIPO_CAMBIO_USD);
       setCajaAbierta(Boolean(caja?.abierta || caja?.estado === "Abierto"));
       applyPosCatalogData(catalog);
 
@@ -121,6 +123,20 @@ export function usePOS(currencySymbol = "C$") {
   useEffect(() => {
     loadCatalog();
   }, [loadCatalog]);
+
+  useEffect(() => {
+    const onTipoCambioGuardado = async () => {
+      try {
+        const tc = await backofficeApi.configuracionTipoCambio().catch(() => null);
+        const tcNum = parseTipoCambioApiResponse(tc);
+        if (tcNum != null) setExchangeRate(tcNum);
+      } catch {
+        /* sin snackbar: solo refresco silencioso */
+      }
+    };
+    window.addEventListener(POS_EXCHANGE_RATE_UPDATED_EVENT, onTipoCambioGuardado);
+    return () => window.removeEventListener(POS_EXCHANGE_RATE_UPDATED_EVENT, onTipoCambioGuardado);
+  }, []);
 
   /** Solo catálogo (stock/precios), sin pantalla de carga — tras venta o `POS_INVENTORY_UPDATED_EVENT`. */
   const refreshCatalogProducts = useCallback(async () => {

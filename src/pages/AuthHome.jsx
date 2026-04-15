@@ -6,8 +6,15 @@ import { NAV_ITEMS } from "../features/backoffice/constants.js";
 import { backofficeApi } from "../features/backoffice/services/backofficeApi.js";
 import { PAGINATION } from "../features/backoffice/constants/pagination.js";
 import { setPendingInventoryCategory } from "../features/backoffice/utils/inventoryUtils.js";
-import { POS_INVENTORY_UPDATED_EVENT } from "../features/backoffice/constants/posEvents.js";
-import { DEFAULT_TIPO_CAMBIO_USD, resolveCurrencySymbol } from "../features/backoffice/utils/currency.js";
+import {
+  POS_EXCHANGE_RATE_UPDATED_EVENT,
+  POS_INVENTORY_UPDATED_EVENT,
+} from "../features/backoffice/constants/posEvents.js";
+import {
+  DEFAULT_TIPO_CAMBIO_USD,
+  parseTipoCambioApiResponse,
+  resolveCurrencySymbol,
+} from "../features/backoffice/utils/currency.js";
 import { pickPortalTagline } from "../features/backoffice/utils/portalConfig.js";
 import {
   canAccessView,
@@ -105,9 +112,8 @@ export function AuthHome() {
       try {
         const tc = await backofficeApi.configuracionTipoCambio().catch(() => null);
         if (!mounted) return;
-        const tcValue = Number(tc?.tipoCambioDolar ?? tc?.TipoCambioDolar ?? tc?.valor ?? 0);
-        if (Number.isFinite(tcValue) && tcValue > 0) setTipoCambio(tcValue);
-        else setTipoCambio(DEFAULT_TIPO_CAMBIO_USD);
+        const tcValue = parseTipoCambioApiResponse(tc);
+        setTipoCambio(tcValue ?? DEFAULT_TIPO_CAMBIO_USD);
 
         if (canUseConfiguracionesCompletas(user)) {
           const data = await backofficeApi.configuraciones();
@@ -127,6 +133,20 @@ export function AuthHome() {
       mounted = false;
     };
   }, [user]);
+
+  useEffect(() => {
+    const recargarTipoCambio = async () => {
+      try {
+        const tc = await backofficeApi.configuracionTipoCambio().catch(() => null);
+        const tcValue = parseTipoCambioApiResponse(tc);
+        setTipoCambio(tcValue ?? DEFAULT_TIPO_CAMBIO_USD);
+      } catch {
+        setTipoCambio(DEFAULT_TIPO_CAMBIO_USD);
+      }
+    };
+    window.addEventListener(POS_EXCHANGE_RATE_UPDATED_EVENT, recargarTipoCambio);
+    return () => window.removeEventListener(POS_EXCHANGE_RATE_UPDATED_EVENT, recargarTipoCambio);
+  }, []);
 
   const toggleSidebar = () => {
     const next = !sidebarCollapsed;

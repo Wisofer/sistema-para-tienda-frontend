@@ -16,6 +16,7 @@ import {
 import { backofficeApi } from "../services/backofficeApi.js";
 import { BackofficePageShell, BackofficeStatCardsListSkeleton } from "../components/index.js";
 import { formatCurrency } from "../utils/currency.js";
+import { dashboardTransaccionesHoy } from "../utils/dashboardResumen.js";
 
 const icons = [ClipboardList, BarChart3, CircleDollarSign, Clock3];
 const TOP_PRODUCTS_LIMIT = 3;
@@ -66,9 +67,9 @@ export function DashboardView({ currencySymbol = "C$" }) {
         const lowStockItems = dashboard?.productosStockBajoLista || [];
         const rango = dashboard?.rango || {};
 
-        const ventasHoy = kpis?.totalOrdenesHoy ?? kpis?.ordenesHoy ?? dashboard?.totalOrdenesHoy ?? 0;
         const totalVentasValor = kpis?.totalVentasHoy ?? dashboard?.totalVentasHoy ?? 0;
         const ticketPromedio = kpis?.ticketPromedioHoy ?? dashboard?.ticketPromedioHoy ?? 0;
+        const ventasHoy = dashboardTransaccionesHoy(dashboard);
         const totalCajaHoy =
           kpis?.totalCajaHoy ??
           kpis?.TotalCajaHoy ??

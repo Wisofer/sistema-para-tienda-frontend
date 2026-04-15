@@ -88,10 +88,38 @@ export function useReports(currencySymbol = "C$") {
               o.fechaUltimaActualizacion ?? o.FechaUltimaActualizacion ?? null,
           }))
         );
+        const d = data && typeof data === "object" ? data : {};
+        const conteoApiCandidatos = [
+          d.totalOrdenes,
+          d.TotalOrdenes,
+          d.cantidadVentas,
+          d.CantidadVentas,
+          d.cantidadTickets,
+          d.CantidadTickets,
+          d.totalTickets,
+          d.TotalTickets,
+          d.ordenes,
+          d.Ordenes,
+        ];
+        let totalOrdenesApi = 0;
+        for (const v of conteoApiCandidatos) {
+          const n = Number(v);
+          if (Number.isFinite(n) && n > 0) {
+            totalOrdenesApi = n;
+            break;
+          }
+        }
+        const totalVentas = Number(d.totalVentas ?? d.TotalVentas ?? d.total ?? 0) || 0;
+        const totalOrdenes =
+          totalOrdenesApi > 0 ? totalOrdenesApi : ordersItems.length;
+        let promedioTicket = Number(d.promedioTicket ?? d.PromedioTicket ?? d.ticketPromedio ?? d.TicketPromedio);
+        if (!Number.isFinite(promedioTicket) || promedioTicket < 0) {
+          promedioTicket = totalOrdenes > 0 ? totalVentas / totalOrdenes : 0;
+        }
         setSummary({
-          totalVentas: data?.totalVentas ?? data?.total ?? 0,
-          totalOrdenes: data?.totalOrdenes ?? data?.ordenes ?? 0,
-          promedioTicket: data?.promedioTicket ?? data?.ticketPromedio ?? 0,
+          totalVentas,
+          totalOrdenes,
+          promedioTicket,
         });
       } else if (reportId === "productos-top") {
         const data = await backofficeApi.reportesProductosTop({

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { DollarSign, Pencil, Trash2 } from "lucide-react";
 import { backofficeApi } from "../services/backofficeApi.js";
 import { BackofficeDialog, BackofficeListSkeletonLoading, BackofficePageShell } from "../components/index.js";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
@@ -11,6 +11,14 @@ import {
   modalFormRootClass,
   modalInputTouchClass,
 } from "../utils/modalResponsiveClasses.js";
+import { POS_EXCHANGE_RATE_UPDATED_EVENT } from "../constants/posEvents.js";
+import { tipoCambioInputTextFromApi } from "../utils/currency.js";
+
+async function persistTipoCambioServidor(n) {
+  if (!Number.isFinite(n) || n <= 0) return;
+  await backofficeApi.updateTipoCambio(n);
+  window.dispatchEvent(new CustomEvent(POS_EXCHANGE_RATE_UPDATED_EVENT));
+}
 
 export function SettingsView() {
   const { user } = useAuth();
@@ -34,15 +42,19 @@ export function SettingsView() {
   const [alertasStockMinimo, setAlertasStockMinimo] = useState(true);
   const [sonidosNotificacion, setSonidosNotificacion] = useState(true);
   const [confirmDeleteTemplate, setConfirmDeleteTemplate] = useState({ open: false, id: null });
+  /** Valor editado del tipo de cambio USD→C$ (mismo endpoint que el POS). */
+  const [tipoCambioInput, setTipoCambioInput] = useState(() => tipoCambioInputTextFromApi(null));
 
   const loadAll = async () => {
-    const [config, tmpl] = await Promise.all([
+    const [config, tmpl, tc] = await Promise.all([
       backofficeApi.configuraciones(),
       backofficeApi.listPlantillasWhatsapp(templatesActivas === "" ? {} : { activas: templatesActivas }),
+      backofficeApi.configuracionTipoCambio().catch(() => null),
     ]);
     const list = Array.isArray(config) ? config : config?.items || [];
     setSettings(list);
     setTemplates(Array.isArray(tmpl) ? tmpl : tmpl?.items || []);
+    setTipoCambioInput(tipoCambioInputTextFromApi(tc));
   };
 
   useEffect(() => {
@@ -78,9 +90,7 @@ export function SettingsView() {
       const claveNorm = String(configForm.clave || "").trim().toLowerCase();
       if (claveNorm === "tipocambiodolar") {
         const n = Number(String(configForm.valor).replace(",", "."));
-        if (Number.isFinite(n) && n > 0) {
-          await backofficeApi.updateTipoCambio(n).catch(() => {});
-        }
+        await persistTipoCambioServidor(n).catch(() => {});
       }
       await loadAll();
       setModalOpen(false);
@@ -167,6 +177,23 @@ export function SettingsView() {
     }
   };
 
+  const saveTipoCambioDolar = async () => {
+    const n = Number(String(tipoCambioInput).replace(",", ".").trim());
+    if (!Number.isFinite(n) || n <= 0) {
+      snackbar.error("Ingresa un tipo de cambio válido (mayor que 0).");
+      return;
+    }
+    setSaving(true);
+    try {
+      await persistTipoCambioServidor(n);
+      snackbar.success("Tipo de cambio actualizado. El POS usará este valor al cobrar en USD.");
+    } catch (e) {
+      snackbar.error(e.message || "No se pudo guardar el tipo de cambio.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const makeDefaultTemplate = async (id) => {
     setSaving(true);
     setError("");
@@ -211,6 +238,40 @@ export function SettingsView() {
                 </div>
               </div>
             </article>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                <DollarSign className="h-5 w-5" aria-hidden />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800">Tipo de cambio (dólar)</h3>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1">
+                <label htmlFor="tipo-cambio-usd" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                  1 USD = C$
+                </label>
+                <input
+                  id="tipo-cambio-usd"
+                  type="text"
+                  inputMode="decimal"
+                  value={tipoCambioInput}
+                  onChange={(e) => setTipoCambioInput(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold tabular-nums text-slate-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  placeholder={tipoCambioInputTextFromApi(null)}
+                  autoComplete="off"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => void saveTipoCambioDolar()}
+                disabled={saving}
+                className="shrink-0 rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                Guardar tipo de cambio
+              </button>
+            </div>
           </section>
 
           {settings.length > 0 && (
