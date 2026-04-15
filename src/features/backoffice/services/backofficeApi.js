@@ -168,6 +168,7 @@ export const backofficeApi = {
 
   // Configuración
   configuraciones: () => settingsApi.list(),
+  configuracionPorClave: (clave) => settingsApi.get(clave),
   configuracionTipoCambio: () => api.get("/api/v1/configuraciones/tipo-cambio"),
   updateTipoCambio: (val) => api.put("/api/v1/configuraciones/tipo-cambio", { tipoCambioDolar: val }),
   upsertConfiguracion: (clave, valor, descripcion) => {

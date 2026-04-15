@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DollarSign, Pencil, Trash2 } from "lucide-react";
+import { DollarSign, KeyRound, Pencil, Trash2 } from "lucide-react";
 import { backofficeApi } from "../services/backofficeApi.js";
 import { BackofficeDialog, BackofficeListSkeletonLoading, BackofficePageShell } from "../components/index.js";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
@@ -18,6 +18,47 @@ async function persistTipoCambioServidor(n) {
   if (!Number.isFinite(n) || n <= 0) return;
   await backofficeApi.updateTipoCambio(n);
   window.dispatchEvent(new CustomEvent(POS_EXCHANGE_RATE_UPDATED_EVENT));
+}
+
+const CODIGO_CANCELACION_KEY = "CodigoCancelacionVenta";
+
+function findConfigValueByKey(settings, keys) {
+  const list = Array.isArray(settings) ? settings : [];
+  const wanted = new Set(keys.map((k) => String(k).trim().toLowerCase()));
+  for (const cfg of list) {
+    const key = String(cfg?.clave ?? cfg?.Clave ?? "").trim().toLowerCase();
+    if (!key || !wanted.has(key)) continue;
+    const value = cfg?.valor ?? cfg?.Valor;
+    return value != null ? String(value) : "";
+  }
+  return "";
+}
+
+async function persistCodigoCancelacionServidor(code) {
+  const raw = String(code ?? "").trim();
+  if (!raw) throw new Error("Ingresa el código de devolución/cancelación.");
+  await backofficeApi.upsertConfiguracion(
+    CODIGO_CANCELACION_KEY,
+    raw,
+    "Código/PIN para cancelación o devolución de ventas"
+  );
+}
+
+async function fetchCodigoCancelacionWithFallback(list) {
+  const fromList = findConfigValueByKey(list, [
+    "CodigoCancelacionVenta",
+    "codigoCancelacionVenta",
+    "CodigoDevolucionVenta",
+    "codigoDevolucionVenta",
+  ]);
+  if (fromList) return fromList;
+  try {
+    const cfg = await backofficeApi.configuracionPorClave(CODIGO_CANCELACION_KEY);
+    const v = cfg?.valor ?? cfg?.Valor ?? cfg?.data?.valor ?? cfg?.data?.Valor;
+    return v != null ? String(v) : "";
+  } catch {
+    return "";
+  }
 }
 
 export function SettingsView() {
@@ -44,6 +85,7 @@ export function SettingsView() {
   const [confirmDeleteTemplate, setConfirmDeleteTemplate] = useState({ open: false, id: null });
   /** Valor editado del tipo de cambio USD→C$ (mismo endpoint que el POS). */
   const [tipoCambioInput, setTipoCambioInput] = useState(() => tipoCambioInputTextFromApi(null));
+  const [codigoCancelacionInput, setCodigoCancelacionInput] = useState("");
 
   const loadAll = async () => {
     const [config, tmpl, tc] = await Promise.all([
@@ -53,6 +95,7 @@ export function SettingsView() {
     ]);
     const list = Array.isArray(config) ? config : config?.items || [];
     setSettings(list);
+    setCodigoCancelacionInput(await fetchCodigoCancelacionWithFallback(list));
     setTemplates(Array.isArray(tmpl) ? tmpl : tmpl?.items || []);
     setTipoCambioInput(tipoCambioInputTextFromApi(tc));
   };
@@ -194,6 +237,24 @@ export function SettingsView() {
     }
   };
 
+  const saveCodigoCancelacion = async () => {
+    const raw = String(codigoCancelacionInput ?? "").trim();
+    if (!raw) {
+      snackbar.error("Ingresa el código de devolución/cancelación.");
+      return;
+    }
+    setSaving(true);
+    try {
+      await persistCodigoCancelacionServidor(raw);
+      await loadAll();
+      snackbar.success("Código de devolución/cancelación actualizado.");
+    } catch (e) {
+      snackbar.error(e.message || "No se pudo guardar el código de devolución/cancelación.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const makeDefaultTemplate = async (id) => {
     setSaving(true);
     setError("");
@@ -270,6 +331,42 @@ export function SettingsView() {
                 className="shrink-0 rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
               >
                 Guardar tipo de cambio
+              </button>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
+                <KeyRound className="h-5 w-5" aria-hidden />
+              </div>
+              <h3 className="text-sm font-bold text-slate-800">Código de devolución/cancelación</h3>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              <div className="min-w-0 flex-1">
+                <label
+                  htmlFor="codigo-cancelacion-venta"
+                  className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500"
+                >
+                  PIN / código de confirmación
+                </label>
+                <input
+                  id="codigo-cancelacion-venta"
+                  type="password"
+                  autoComplete="new-password"
+                  value={codigoCancelacionInput}
+                  onChange={(e) => setCodigoCancelacionInput(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold tabular-nums text-slate-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
+                  placeholder="Ingresa código"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => void saveCodigoCancelacion()}
+                disabled={saving}
+                className="shrink-0 rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
+              >
+                Guardar código
               </button>
             </div>
           </section>
