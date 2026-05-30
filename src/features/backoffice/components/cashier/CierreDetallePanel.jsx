@@ -36,9 +36,9 @@ export function CierreDetallePanel({ detalle, currencySymbol = "C$", onClose }) 
     {
       label: "Ventas Totales",
       value: cierreDetalleTotalGeneral(detalle),
-      color: "text-indigo-650",
-      bg: "bg-indigo-50/30",
-      border: "border-indigo-100/50",
+      color: "text-blue-600",
+      bg: "bg-blue-50/30",
+      border: "border-blue-100/50",
       optional: false,
     },
     {

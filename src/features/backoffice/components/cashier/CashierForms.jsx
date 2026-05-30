@@ -36,7 +36,7 @@ export function CashierForms({
       <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02),0_12px_24px_rgba(0,0,0,0.02)] animate-in slide-in-from-right-4 duration-500">
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div className="flex items-center gap-3">
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100/50 shadow-inner">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 border border-blue-100/50 shadow-inner">
               <Coins className="h-5.5 w-5.5" />
             </span>
             <div>
@@ -47,7 +47,7 @@ export function CashierForms({
           <button
             type="button"
             onClick={() => setShowApertura(false)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-850 active:scale-95 transition-all duration-200 cursor-pointer"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-widest text-slate-650 hover:bg-slate-50 hover:text-slate-850 active:scale-95 transition-all duration-200 cursor-pointer"
           >
             <ArrowLeft className="h-4.5 w-4.5" />
             Volver
@@ -60,7 +60,7 @@ export function CashierForms({
               Monto Inicial (Base de Efectivo)
             </label>
             <div className="flex items-center gap-2 focus-within:scale-105 transition-transform duration-300">
-              <span className="text-3xl font-black text-indigo-500">{currencySymbol}</span>
+              <span className="text-3xl font-black text-blue-600">{currencySymbol}</span>
               <input
                 type="number"
                 step="0.01"
@@ -84,7 +84,7 @@ export function CashierForms({
               type="submit"
               disabled={processing || !isOnline}
               title={offlineButtonTitle(isOnline)}
-              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 py-3.5 text-xs font-extrabold uppercase tracking-widest text-white shadow-lg shadow-emerald-600/15 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 hover:bg-blue-700 py-3.5 text-xs font-extrabold uppercase tracking-widest text-white shadow-lg shadow-blue-600/15 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               <Unlock className="h-4.5 w-4.5" />
               Iniciar Operaciones
@@ -110,10 +110,10 @@ export function CashierForms({
         
         <form onSubmit={handleCerrarCaja} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200/80 bg-white focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 px-4 py-3 transition-all duration-300 shadow-sm">
+            <div className="rounded-xl border border-slate-200/80 bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 px-4 py-3 transition-all duration-300 shadow-sm">
               <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Efectivo contado (Real)</label>
               <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-base font-black text-indigo-600">{currencySymbol}</span>
+                <span className="text-base font-black text-blue-600">{currencySymbol}</span>
                 <input
                   type="number"
                   step="0.01"
@@ -126,7 +126,7 @@ export function CashierForms({
               </div>
             </div>
             
-            <div className="rounded-xl border border-slate-200/80 bg-white focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 px-4 py-3 transition-all duration-300 shadow-sm">
+            <div className="rounded-xl border border-slate-200/80 bg-white focus-within:border-blue-500 focus-within:ring-4 focus-within:ring-blue-500/10 px-4 py-3 transition-all duration-300 shadow-sm">
               <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Observaciones o notas</label>
               <input
                 value={cierreForm.observaciones}
@@ -152,7 +152,7 @@ export function CashierForms({
                 Al escribir el monto del efectivo contado físicamente en caja, el sistema calculará automáticamente si falta, sobra o si está completamente cuadrado.
               </p>
             ) : arqueoPreview.kind === "cuadra" ? (
-              <div className="mt-3.5 flex items-start gap-3 rounded-xl border border-emerald-250 bg-emerald-50/60 p-4 animate-fade-in">
+              <div className="mt-3.5 flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 animate-fade-in">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 shadow-inner">
                   <CheckCircle className="h-4.5 w-4.5 stroke-[2]" />
                 </span>
@@ -162,20 +162,20 @@ export function CashierForms({
                 </div>
               </div>
             ) : arqueoPreview.kind === "sobra" ? (
-              <div className="mt-3.5 flex items-start gap-3 rounded-xl border border-green-250 bg-green-50/60 p-4 shadow-sm animate-fade-in">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-800 shadow-inner">
+              <div className="mt-3.5 flex items-start gap-3 rounded-xl border border-emerald-100 bg-emerald-50/40 p-4 shadow-sm animate-fade-in">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-850 shadow-inner">
                   <TrendingUp className="h-4.5 w-4.5 stroke-[2]" />
                 </span>
                 <div className="flex-1">
-                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-green-950">{arqueoPreview.label}</p>
-                  <p className="mt-0.5 text-2xl font-black tabular-nums text-green-600">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-950">{arqueoPreview.label}</p>
+                  <p className="mt-0.5 text-2xl font-black tabular-nums text-emerald-600">
                     +{formatCurrency(arqueoPreview.diff, currencySymbol)}
                   </p>
-                  <p className="mt-1 text-xs font-semibold text-green-800/90 leading-relaxed">{arqueoPreview.detail}</p>
+                  <p className="mt-1 text-xs font-semibold text-emerald-800/90 leading-relaxed">{arqueoPreview.detail}</p>
                 </div>
               </div>
             ) : (
-              <div className="mt-3.5 flex items-start gap-3 rounded-xl border border-rose-250 bg-rose-50/60 p-4 shadow-sm animate-fade-in">
+              <div className="mt-3.5 flex items-start gap-3 rounded-xl border border-rose-150 bg-rose-50/40 p-4 shadow-sm animate-fade-in">
                 <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-800 shadow-inner animate-pulse">
                   <AlertTriangle className="h-4.5 w-4.5 stroke-[2]" />
                 </span>
@@ -195,9 +195,9 @@ export function CashierForms({
               type="submit"
               disabled={processing || !isOnline}
               title={offlineButtonTitle(isOnline)}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-750 hover:from-rose-700 hover:to-red-800 py-3.5 text-xs font-extrabold uppercase tracking-widest text-white shadow-lg shadow-rose-600/10 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto cursor-pointer"
+              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 py-2.5 px-5 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-blue-600/10 hover:scale-[1.01] active:scale-[0.98] transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
-              <Lock className="h-4 w-4" />
+              <Lock className="h-3.5 w-3.5" />
               Finalizar Turno y Cerrar
             </button>
           </div>

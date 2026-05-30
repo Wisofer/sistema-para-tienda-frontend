@@ -29,21 +29,21 @@ export function CashierSummary({
       value: ventas, 
       currency: true,
       icon: TrendingUp,
-      color: "text-indigo-600 bg-indigo-50 border-indigo-100/50"
+      color: "text-blue-600 bg-blue-50 border-blue-100/50"
     },
     { 
       label: "Tickets Cobrados", 
       value: ordenes, 
       currency: false,
       icon: Ticket,
-      color: "text-amber-600 bg-amber-50 border-amber-100/50"
+      color: "text-blue-600 bg-blue-50 border-blue-100/50"
     },
     { 
       label: "Efectivo Recibido", 
       value: efectivo, 
       currency: true,
       icon: Coins,
-      color: "text-emerald-600 bg-emerald-50 border-emerald-100/50"
+      color: "text-blue-600 bg-blue-50 border-blue-100/50"
     },
     { 
       label: "Tarjeta + Transf.", 
@@ -77,17 +77,17 @@ export function CashierSummary({
         })}
       </div>
 
-      <div className="mt-5 rounded-2xl bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 p-6 text-white shadow-xl shadow-indigo-950/15 relative overflow-hidden">
-        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
-        <p className="text-[10px] font-extrabold uppercase tracking-widest text-indigo-200/90">
+      <div className="mt-5 rounded-2xl border border-blue-100 bg-blue-50/30 p-6 text-slate-800 relative overflow-hidden shadow-sm shadow-blue-100/5">
+        <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-blue-500/5 blur-2xl pointer-events-none" />
+        <p className="text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
           Efectivo total esperado en caja (Fondo Inicial + Efectivo Ventas)
         </p>
-        <p className="mt-1.5 text-3xl font-black tabular-nums tracking-tight text-white">
+        <p className="mt-1.5 text-3xl font-black tabular-nums tracking-tight text-blue-600">
           {formatCurrency(montoEsperadoCalculado, currencySymbol)}
         </p>
         {fondo > 0 ? (
-          <p className="mt-2 text-[10px] font-bold text-indigo-300 flex items-center gap-1.5 uppercase tracking-wider">
-            <span className="h-1.5 w-1.5 rounded-full bg-indigo-400 animate-pulse" />
+          <p className="mt-2 text-[10px] font-bold text-slate-500 flex items-center gap-1.5 uppercase tracking-wider">
+            <span className="h-1.5 w-1.5 rounded-full bg-blue-500 animate-pulse" />
             Fondo inicial base: {formatCurrency(fondo, currencySymbol)}
           </p>
         ) : null}
