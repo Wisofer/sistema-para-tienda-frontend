@@ -28,7 +28,7 @@ export function PosHeader({
         </div>
 
         {/* Filtros de Categoría */}
-        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
+        <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 hide-scrollbar">
           <button
             onClick={() => setSelectedCategory("")}
             className={`whitespace-nowrap rounded-lg px-4 py-1.5 text-xs font-black uppercase tracking-widest transition-all ${!selectedCategory

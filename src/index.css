@@ -74,6 +74,18 @@
   height: 0;
 }
 
+/* Alias usado en componentes POS */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
+
 html {
   scrollbar-width: none;
   -webkit-overflow-scrolling: touch;

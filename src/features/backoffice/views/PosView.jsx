@@ -75,7 +75,7 @@ export function PosView({ currencySymbol = "C$" }) {
         />
 
         {/* Grilla de Productos */}
-        <div className="flex-1 content-start gap-4 overflow-y-auto p-4 scrollbar-hide">
+        <div className="flex-1 content-start gap-4 overflow-y-auto p-4 hide-scrollbar">
           <PosCatalog
             products={filteredProducts}
             catalogLoading={loading || catalogSearchLoading}

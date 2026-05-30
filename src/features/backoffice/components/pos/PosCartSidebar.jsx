@@ -53,7 +53,7 @@ export function PosCartSidebar({
       </div>
 
       {/* Listado de Items en el Carrito */}
-      <div className="flex-1 space-y-1.5 overflow-y-auto px-2.5 py-2 scrollbar-hide sm:px-3">
+      <div className="flex-1 space-y-1.5 overflow-y-auto px-2.5 py-2 hide-scrollbar sm:px-3">
         {cart.map((item) => (
           <div
             key={item.lineId}
