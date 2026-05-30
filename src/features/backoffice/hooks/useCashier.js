@@ -3,6 +3,13 @@ import { backofficeApi } from "../services/backofficeApi.js";
 import { PAGINATION } from "../constants/pagination.js";
 import { useSnackbar } from "../../../contexts/SnackbarContext.jsx";
 import { formatDiffForMessage } from "../utils/cashierArqueo.js";
+import {
+  cajaPreviewTotalOrdenes,
+  cajaPreviewTotalVentas,
+  estimateTicketsFromVentasAndPromedio,
+  ticketPromedioFromDashboardResumen,
+} from "../utils/caja.js";
+import { dashboardTransaccionesHoy } from "../utils/dashboardResumen.js";
 
 /**
  * Hook personalizado para manejar la lógica del módulo de Caja.
@@ -12,6 +19,8 @@ export function useCashier(currencySymbol = "C$") {
   const snackbar = useSnackbar();
   const [estado, setEstado] = useState(null);
   const [preview, setPreview] = useState(null);
+  /** Conteo de tickets del turno (preview o estimado si el API no lo manda). */
+  const [ticketsCobrados, setTicketsCobrados] = useState(0);
   const [historial, setHistorial] = useState([]);
   const [historialPage, setHistorialPage] = useState(1);
   const [historialTotalPages, setHistorialTotalPages] = useState(1);
@@ -43,6 +52,52 @@ export function useCashier(currencySymbol = "C$") {
         .catch(() => ({ items: [], totalPages: 1, page: 1 }));
       setEstado(estadoCaja || null);
       setPreview(prev || null);
+
+      let tickets = cajaPreviewTotalOrdenes(prev, estadoCaja);
+      if (cajaAbierta && prev && tickets === 0) {
+        const ventasTurno = cajaPreviewTotalVentas(prev);
+        if (ventasTurno > 0) {
+          const today = new Date().toISOString().slice(0, 10);
+          try {
+            const dash = await backofficeApi.dashboardResumen({ topProductos: 1 });
+            const ticketProm = ticketPromedioFromDashboardResumen(dash);
+            tickets = estimateTicketsFromVentasAndPromedio(ventasTurno, ticketProm);
+            if (tickets === 0) {
+              const hoy = dashboardTransaccionesHoy(dash);
+              if (hoy > 0) tickets = hoy;
+            }
+          } catch {
+            /* dashboard no disponible (p. ej. rol Cajero) */
+          }
+          if (tickets === 0) {
+            try {
+              const rep = await backofficeApi.reportesResumenVentas({
+                desde: today,
+                hasta: today,
+                filtroVentas: "activas",
+              });
+              const d = rep && typeof rep === "object" ? rep : {};
+              for (const key of [
+                "totalOrdenes",
+                "TotalOrdenes",
+                "cantidadVentas",
+                "CantidadVentas",
+                "cantidadTickets",
+                "CantidadTickets",
+              ]) {
+                const n = Number(d[key]);
+                if (Number.isFinite(n) && n > 0) {
+                  tickets = Math.trunc(n);
+                  break;
+                }
+              }
+            } catch {
+              /* sin reportes */
+            }
+          }
+        }
+      }
+      setTicketsCobrados(tickets);
       const rawItems = hist?.items ?? hist?.Items;
       setHistorial(Array.isArray(rawItems) ? rawItems : Array.isArray(hist) ? hist : []);
       setHistorialPage(hist?.page ?? hist?.Page ?? page);
@@ -138,7 +193,7 @@ export function useCashier(currencySymbol = "C$") {
   const clearCierreDetalle = () => setCierreDetalle(null);
 
   return {
-    estado, preview, historial, historialPage, historialTotalPages,
+    estado, preview, ticketsCobrados, historial, historialPage, historialTotalPages,
     cierreDetalle, clearCierreDetalle, error, processing, loading,
     showApertura, setShowApertura,
     showHistorial, setShowHistorial,

@@ -9,6 +9,12 @@ import { CashierStatusCards } from "../components/cashier/CashierStatusCards.jsx
 import { CashierForms } from "../components/cashier/CashierForms.jsx";
 import { CashierSummary } from "../components/cashier/CashierSummary.jsx";
 import { CashierHistory } from "../components/cashier/CashierHistory.jsx";
+import {
+  cajaPreviewMediosPago,
+  cajaPreviewMontoEsperado,
+  cajaPreviewMontoInicial,
+  cajaPreviewTotalVentas,
+} from "../utils/caja.js";
 
 /**
  * Vista principal de Caja (Refactorizada).
@@ -19,6 +25,7 @@ export function CashierView({ currencySymbol = "C$" }) {
   const {
     estado,
     preview,
+    ticketsCobrados,
     historial,
     historialPage,
     historialTotalPages,
@@ -46,32 +53,12 @@ export function CashierView({ currencySymbol = "C$" }) {
   // Pantalla de carga inicial
   if (loading) return <BackofficeListSkeletonLoading rows={5} maxWidth="7xl" />;
 
-  // Cálculos de resumen (Extraídos para claridad)
-  const totalEfectivo =
-    preview?.totales?.totalEfectivo ??
-    preview?.totales?.efectivo ??
-    preview?.totalEfectivo ??
-    preview?.efectivo ??
-    0;
-  const totalTarjeta =
-    preview?.totales?.totalTarjeta ??
-    preview?.totales?.tarjeta ??
-    preview?.totalTarjeta ??
-    preview?.tarjeta ??
-    0;
-  const totalTransferencia =
-    preview?.totales?.totalTransferencia ??
-    preview?.totales?.transferencia ??
-    preview?.totalTransferencia ??
-    preview?.transferencia ??
-    0;
-  const totalVentas = preview?.totales?.totalVentasNetas ?? preview?.totalGeneral ?? 0;
-  const totalOrdenes = preview?.totales?.totalOrdenesPagadas ?? preview?.totalOrdenes ?? 0;
-  const montoInicialActual = preview?.cierre?.montoInicial ?? estado?.caja?.montoInicial ?? 0;
-  
-  const montoEsperadoCalculado = 
-    preview?.totales?.montoEsperado ?? 
-    (Number(montoInicialActual || 0) + Number(totalEfectivo || 0));
+  const { efectivo: totalEfectivo, tarjeta: totalTarjeta, transferencia: totalTransferencia } =
+    cajaPreviewMediosPago(preview);
+  const totalVentas = cajaPreviewTotalVentas(preview);
+  const totalOrdenes = ticketsCobrados;
+  const montoInicialActual = cajaPreviewMontoInicial(preview, estado);
+  const montoEsperadoCalculado = cajaPreviewMontoEsperado(preview, montoInicialActual);
 
   const cajaAbierta = estado?.abierta || estado?.estado === "Abierto";
 

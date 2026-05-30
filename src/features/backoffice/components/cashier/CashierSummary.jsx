@@ -70,7 +70,11 @@ export function CashierSummary({
                 </span>
               </div>
               <p className="mt-2.5 text-lg font-black tabular-nums text-slate-800 tracking-tight">
-                {cell.currency ? formatCurrency(cell.value, currencySymbol) : cell.value}
+                {cell.currency
+                  ? formatCurrency(cell.value, currencySymbol)
+                  : cell.label === "Tickets Cobrados" && cell.value === 0 && ventas > 0
+                    ? "—"
+                    : cell.value}
               </p>
             </div>
           );
