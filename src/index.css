@@ -18,14 +18,17 @@
 }
 
 @layer base {
+
   /* Evita que el banner fijo de “sin conexión” tape la primera franja de la UI */
   #root {
     padding-top: var(--offline-banner-height, 0px);
     transition: padding-top 0.2s ease;
   }
+
   body {
-    @apply bg-slate-100 text-slate-800 antialiased;
+    @apply bg-white text-slate-800 antialiased;
   }
+
   html.dark body {
     @apply bg-slate-950 text-slate-100;
   }
@@ -37,25 +40,12 @@
   }
 
   /**
-   * Fondo del área autenticada: manchas celestes muy suaves + puntitos discretos (no brillantes).
-   * Sin `background-attachment: fixed` en móvil para evitar jank al scroll.
+   * Fondo del área autenticada: Blanco puro.
    */
   .app-shell-atmosphere {
-    background-color: #eef4f8;
-    background-image:
-      radial-gradient(circle at 1px 1px, rgba(125, 211, 252, 0.09) 1px, transparent 0),
-      radial-gradient(ellipse 120% 90% at 0% 0%, rgba(186, 230, 253, 0.22), transparent 58%),
-      radial-gradient(ellipse 100% 85% at 100% 5%, rgba(165, 243, 252, 0.16), transparent 52%),
-      radial-gradient(ellipse 90% 75% at 92% 88%, rgba(103, 232, 249, 0.12), transparent 55%),
-      radial-gradient(ellipse 85% 70% at 8% 95%, rgba(224, 242, 254, 0.2), transparent 50%);
-    background-size: 32px 32px, auto, auto, auto, auto;
+    background-color: #ffffff;
   }
 
-  @media (min-width: 1024px) {
-    .app-shell-atmosphere {
-      background-attachment: fixed;
-    }
-  }
 
   html.dark .app-shell-atmosphere {
     background-color: #0c1222;
@@ -72,9 +62,13 @@
 /* Oculta el riel de scrollbar pero mantiene el scroll.
    Esto evita que se vea la barra lateral al hacer zoom (pasa mucho en Chrome). */
 .hide-scrollbar {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE/Edge legacy */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE/Edge legacy */
+  -webkit-overflow-scrolling: touch;
 }
+
 .hide-scrollbar::-webkit-scrollbar {
   width: 0;
   height: 0;
@@ -82,33 +76,31 @@
 
 html {
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+
 html::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
+
 body {
   scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
 }
+
 body::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
 
-/* Fallback: oculta también scrollbars de cualquier contenedor. */
-* {
-  scrollbar-width: none;
-}
-*::-webkit-scrollbar {
-  width: 0;
-  height: 0;
-}
 
 @keyframes snackbar-enter {
   from {
     opacity: 0;
     transform: translateX(1rem);
   }
+
   to {
     opacity: 1;
     transform: translateX(0);
@@ -119,9 +111,11 @@ body::-webkit-scrollbar {
   0% {
     transform: translateX(-110%);
   }
+
   50% {
     transform: translateX(60%);
   }
+
   100% {
     transform: translateX(220%);
   }

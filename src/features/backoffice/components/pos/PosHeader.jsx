@@ -31,11 +31,10 @@ export function PosHeader({
         <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0 scrollbar-hide">
           <button
             onClick={() => setSelectedCategory("")}
-            className={`whitespace-nowrap rounded-lg px-4 py-1.5 text-xs font-black uppercase tracking-widest transition-all ${
-              !selectedCategory
+            className={`whitespace-nowrap rounded-lg px-4 py-1.5 text-xs font-black uppercase tracking-widest transition-all ${!selectedCategory
                 ? "bg-slate-900 text-white shadow-lg shadow-slate-200"
                 : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-            }`}
+              }`}
           >
             Todos
           </button>
@@ -43,11 +42,10 @@ export function PosHeader({
             <button
               key={cat.id}
               onClick={() => setSelectedCategory(String(cat.id))}
-              className={`whitespace-nowrap rounded-lg px-4 py-1.5 text-xs font-black uppercase tracking-widest transition-all ${
-                selectedCategory === String(cat.id)
+              className={`whitespace-nowrap rounded-lg px-4 py-1.5 text-xs font-black uppercase tracking-widest transition-all ${selectedCategory === String(cat.id)
                   ? "bg-blue-600 text-white shadow-lg shadow-blue-100"
                   : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-              }`}
+                }`}
             >
               {cat.nombre}
             </button>

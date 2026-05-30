@@ -289,11 +289,10 @@ export function AuthHome() {
       />
 
       <div
-        className={`grid min-h-0 w-full min-w-0 grid-cols-1 gap-4 min-h-[calc(100dvh-1rem)] md:gap-6 md:min-h-[calc(100dvh-1.5rem)] lg:gap-6 ${
-          sidebarCollapsed
+        className={`grid min-h-0 w-full min-w-0 grid-cols-1 gap-4 min-h-[calc(100dvh-1rem)] md:gap-6 md:min-h-[calc(100dvh-1.5rem)] lg:gap-6 ${sidebarCollapsed
             ? "lg:grid-cols-[minmax(0,88px)_minmax(0,1fr)]"
             : "lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)]"
-        } lg:h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-2rem)]`}
+          } lg:h-[calc(100vh-2rem)] lg:max-h-[calc(100vh-2rem)]`}
       >
         <SidebarNav
           collapsed={sidebarCollapsed}
@@ -305,42 +304,44 @@ export function AuthHome() {
           navItems={navItems}
         />
 
-        <section className="flex h-full min-h-0 min-w-0 flex-col gap-4 overflow-x-hidden overflow-y-auto hide-scrollbar pb-24 sm:gap-6 lg:max-h-full lg:pb-0 lg:pr-2">
-          {showViewHeader && (
-            <header className="shrink-0 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm sm:p-5">
-              <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between lg:gap-4">
-                <div className="min-w-0 flex-1">
-                  <h1 className="text-lg font-semibold leading-snug tracking-tight text-slate-900 sm:text-xl">
-                    {TITLES[activeView] || `Hola ${displayUserName(user) || "equipo"} 👋`}
-                  </h1>
-                  {portalTagline ? (
-                    <p className="mt-1 text-sm text-slate-600">{portalTagline}</p>
-                  ) : null}
+        <section className="flex h-full min-h-0 min-w-0 flex-col overflow-x-hidden overflow-y-visible lg:overflow-y-auto hide-scrollbar pb-24 lg:max-h-full lg:pb-0 lg:pr-2">
+          <div className="w-full max-w-7xl mx-auto flex flex-col gap-4 sm:gap-6 pb-4 lg:pb-6 px-4">
+            {showViewHeader && (
+              <header className="shrink-0 rounded-2xl border border-slate-200/90 bg-white p-4 shadow-sm sm:p-5">
+                <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between lg:gap-4">
+                  <div className="min-w-0 flex-1">
+                    <h1 className="text-lg font-extrabold leading-snug tracking-tight text-slate-800 sm:text-xl">
+                      {TITLES[activeView] || `Hola ${displayUserName(user) || "equipo"} 👋`}
+                    </h1>
+                    {portalTagline ? (
+                      <p className="mt-1 text-xs font-semibold text-slate-400">{portalTagline}</p>
+                    ) : null}
+                  </div>
+                  <div className="hidden shrink-0 lg:block">
+                    <BackofficeShellHeaderActions
+                      variant="card"
+                      user={user}
+                      logout={logout}
+                      sessionLoading={sessionLoading}
+                      lowStockItems={lowStockItems}
+                      refreshLowStock={refreshLowStock}
+                      openView={openView}
+                      allowedViewIds={allowedViewIds}
+                    />
+                  </div>
                 </div>
-                <div className="hidden shrink-0 lg:block">
-                  <BackofficeShellHeaderActions
-                    variant="card"
-                    user={user}
-                    logout={logout}
-                    sessionLoading={sessionLoading}
-                    lowStockItems={lowStockItems}
-                    refreshLowStock={refreshLowStock}
-                    openView={openView}
-                    allowedViewIds={allowedViewIds}
-                  />
-                </div>
-              </div>
-            </header>
-          )}
-          <div className="flex min-h-0 flex-1 flex-col">
-            {activeView === "categories" ? (
-              <CategoriesView
-                onBackToProducts={() => openView("products")}
-                onOpenProducts={navigateToInventoryWithCategory}
-              />
-            ) : (
-              <ActiveView currencySymbol={currencySymbol} exchangeRate={tipoCambio} />
+              </header>
             )}
+            <div className="flex min-h-0 flex-1 flex-col">
+              {activeView === "categories" ? (
+                <CategoriesView
+                  onBackToProducts={() => openView("products")}
+                  onOpenProducts={navigateToInventoryWithCategory}
+                />
+              ) : (
+                <ActiveView currencySymbol={currencySymbol} exchangeRate={tipoCambio} />
+              )}
+            </div>
           </div>
         </section>
       </div>

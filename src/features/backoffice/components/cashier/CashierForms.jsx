@@ -3,6 +3,7 @@ import { useOnlineStatus } from "../../../../hooks/useOnlineStatus.js";
 import { offlineButtonTitle } from "../../../../constants/networkUi.js";
 import { formatCurrency } from "../../utils/currency.js";
 import { computeArqueoPreview } from "../../utils/cashierArqueo.js";
+import { Coins, Lock, Unlock, CheckCircle, TrendingUp, AlertTriangle, ArrowLeft } from "lucide-react";
 
 /**
  * Formularios de Apertura y Cierre de Caja.
@@ -32,49 +33,66 @@ export function CashierForms({
   // Formulario de Apertura (Inyectado en la pantalla de bienvenida)
   if (showApertura) {
     return (
-      <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-in slide-in-from-right-4 duration-500">
-        <div className="mb-6 flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">Apertura de Caja</h2>
-            <p className="text-sm font-medium text-slate-500">Registra el monto inicial de la jornada.</p>
+      <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02),0_12px_24px_rgba(0,0,0,0.02)] animate-in slide-in-from-right-4 duration-500">
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-indigo-50 text-indigo-600 border border-indigo-100/50 shadow-inner">
+              <Coins className="h-5.5 w-5.5" />
+            </span>
+            <div>
+              <h2 className="text-lg font-extrabold text-slate-800 tracking-tight">Apertura de Caja</h2>
+              <p className="text-xs font-semibold text-slate-400 mt-0.5">Registra el fondo inicial con el que inicias el turno.</p>
+            </div>
           </div>
           <button
             type="button"
             onClick={() => setShowApertura(false)}
-            className="rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-extrabold uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-850 active:scale-95 transition-all duration-200 cursor-pointer"
           >
+            <ArrowLeft className="h-4.5 w-4.5" />
             Volver
           </button>
         </div>
-        <form onSubmit={handleAperturaCaja} className="space-y-4">
-          <div className="rounded-xl bg-slate-50 p-4">
-            <label className="mb-2 block text-sm font-medium text-slate-700">Monto inicial ({currencySymbol})</label>
-            <input
-              type="number"
-              step="0.01"
-              min="0.01"
-              value={montoInicial}
-              onChange={(e) => setMontoInicial(e.target.value)}
-              placeholder="0.00"
-              className="w-full bg-transparent text-2xl font-semibold tabular-nums text-slate-900 placeholder:text-slate-300 focus:outline-none"
-              required
-              autoFocus
-            />
+        
+        <form onSubmit={handleAperturaCaja} className="space-y-5">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-6 flex flex-col items-center shadow-inner">
+            <label className="mb-3.5 text-[10px] font-extrabold uppercase tracking-widest text-slate-400">
+              Monto Inicial (Base de Efectivo)
+            </label>
+            <div className="flex items-center gap-2 focus-within:scale-105 transition-transform duration-300">
+              <span className="text-3xl font-black text-indigo-500">{currencySymbol}</span>
+              <input
+                type="number"
+                step="0.01"
+                min="0.01"
+                value={montoInicial}
+                onChange={(e) => setMontoInicial(e.target.value)}
+                placeholder="0.00"
+                className="bg-transparent text-4xl font-black tabular-nums text-slate-800 placeholder:text-slate-250 focus:outline-none w-48 text-center"
+                required
+                autoFocus
+              />
+            </div>
           </div>
-          <p className="text-xs text-slate-500">Efectivo base (fondo de caja) con el que inicias la jornada.</p>
+          
+          <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider text-center leading-relaxed">
+            Fondo de caja necesario para dar vuelto y cambio al iniciar la jornada.
+          </p>
+          
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <button
               type="submit"
               disabled={processing || !isOnline}
               title={offlineButtonTitle(isOnline)}
-              className="rounded-xl bg-green-600 py-3 text-sm font-semibold text-white shadow-sm hover:bg-green-700 disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-green-700 hover:from-emerald-700 hover:to-green-800 py-3.5 text-xs font-extrabold uppercase tracking-widest text-white shadow-lg shadow-emerald-600/15 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
+              <Unlock className="h-4.5 w-4.5" />
               Iniciar Operaciones
             </button>
             <button
               type="button"
               onClick={() => setShowApertura(false)}
-              className="rounded-xl border border-slate-200 bg-white py-3 text-sm font-semibold text-slate-800 hover:bg-slate-50"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white py-3.5 text-xs font-extrabold uppercase tracking-widest text-slate-650 hover:bg-slate-50 active:scale-[0.98] transition-all duration-300 cursor-pointer"
             >
               Cancelar
             </button>
@@ -87,78 +105,102 @@ export function CashierForms({
   // Formulario de Cierre (Inyectado bajo el resumen cuando la caja está abierta)
   if (showCierreForm) {
     return (
-      <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm animate-in slide-in-from-bottom-2 duration-300">
-        <h3 className="mb-4 text-sm font-semibold text-slate-800">Cierre y arqueo</h3>
+      <article className="rounded-2xl border border-slate-100 bg-white p-6 shadow-[0_4px_20px_rgba(0,0,0,0.02),0_12px_24px_rgba(0,0,0,0.02)] animate-in slide-in-from-bottom-2 duration-300">
+        <h3 className="mb-4 text-xs font-extrabold uppercase tracking-wider text-slate-800">Cierre y arqueo de caja</h3>
+        
         <form onSubmit={handleCerrarCaja} className="space-y-4">
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <div className="rounded-xl border border-slate-200 px-4 py-2">
-              <label className="text-xs font-medium text-slate-600">Efectivo contado</label>
-              <input
-                type="number"
-                step="0.01"
-                value={cierreForm.montoReal}
-                onChange={(e) => setCierreForm((s) => ({ ...s, montoReal: e.target.value }))}
-                placeholder="Contado"
-                className="w-full bg-transparent text-lg font-semibold tabular-nums text-slate-900 focus:outline-none"
-                required
-              />
+            <div className="rounded-xl border border-slate-200/80 bg-white focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 px-4 py-3 transition-all duration-300 shadow-sm">
+              <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Efectivo contado (Real)</label>
+              <div className="flex items-center gap-1.5 mt-1">
+                <span className="text-base font-black text-indigo-600">{currencySymbol}</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={cierreForm.montoReal}
+                  onChange={(e) => setCierreForm((s) => ({ ...s, montoReal: e.target.value }))}
+                  placeholder="0.00"
+                  className="w-full bg-transparent text-base font-black tabular-nums text-slate-800 focus:outline-none"
+                  required
+                />
+              </div>
             </div>
-            <div className="rounded-xl border border-slate-200 px-4 py-2">
-              <label className="text-xs font-medium text-slate-600">Observaciones</label>
+            
+            <div className="rounded-xl border border-slate-200/80 bg-white focus-within:border-indigo-500 focus-within:ring-4 focus-within:ring-indigo-500/10 px-4 py-3 transition-all duration-300 shadow-sm">
+              <label className="block text-[9px] font-extrabold uppercase tracking-widest text-slate-400">Observaciones o notas</label>
               <input
                 value={cierreForm.observaciones}
                 onChange={(e) => setCierreForm((s) => ({ ...s, observaciones: e.target.value }))}
-                placeholder="Opcional"
-                className="w-full bg-transparent text-sm font-medium text-slate-900 focus:outline-none"
+                placeholder="Opcional (ej: descuadre por vuelto)"
+                className="w-full bg-transparent text-xs font-bold text-slate-700 mt-2 focus:outline-none placeholder:text-slate-300"
               />
             </div>
           </div>
 
-          <div className="rounded-xl border border-slate-100 bg-slate-50/90 px-4 py-3">
-            <p className="text-xs font-medium text-slate-600">
-              Monto esperado (según sistema){" "}
-              <span className="font-semibold text-slate-900 tabular-nums">
+          <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-4.5 shadow-inner">
+            <p className="text-xs font-extrabold text-slate-500 flex items-center gap-2">
+              Monto esperado (según sistema):
+              <span className="font-black text-slate-800 tabular-nums bg-white px-2 py-0.5 rounded border border-slate-100 text-sm shadow-sm">
                 {formatCurrency(montoEsperadoEnCaja, currencySymbol)}
               </span>
             </p>
+            
             {arqueoPreview === null ? (
-              <p className="mt-2 text-xs text-slate-500">Ingresa un monto válido para ver la diferencia.</p>
+              <p className="mt-3.5 text-xs text-slate-400 font-semibold">Ingresa un monto de efectivo válido para calcular el arqueo.</p>
             ) : arqueoPreview.kind === "empty" ? (
-              <p className="mt-2 text-xs text-slate-500">
-                Al escribir el efectivo contado verás si falta, sobra o cuadra respecto al esperado.
+              <p className="mt-3.5 text-xs text-slate-400 font-semibold leading-relaxed">
+                Al escribir el monto del efectivo contado físicamente en caja, el sistema calculará automáticamente si falta, sobra o si está completamente cuadrado.
               </p>
             ) : arqueoPreview.kind === "cuadra" ? (
-              <div className="mt-3 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-emerald-800">{arqueoPreview.label}</p>
-                <p className="mt-0.5 text-sm text-emerald-900">{arqueoPreview.detail}</p>
+              <div className="mt-3.5 flex items-start gap-3 rounded-xl border border-emerald-250 bg-emerald-50/60 p-4 animate-fade-in">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 shadow-inner">
+                  <CheckCircle className="h-4.5 w-4.5 stroke-[2]" />
+                </span>
+                <div>
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-emerald-950">{arqueoPreview.label}</p>
+                  <p className="mt-0.5 text-xs font-semibold text-emerald-850 leading-relaxed">{arqueoPreview.detail}</p>
+                </div>
               </div>
             ) : arqueoPreview.kind === "sobra" ? (
-              <div className="mt-3 rounded-lg border border-green-200 bg-green-50 px-3 py-2.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-green-800">{arqueoPreview.label}</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-green-900">
-                  +{formatCurrency(arqueoPreview.diff, currencySymbol)}
-                </p>
-                <p className="mt-1 text-xs text-green-800/95">{arqueoPreview.detail}</p>
+              <div className="mt-3.5 flex items-start gap-3 rounded-xl border border-green-250 bg-green-50/60 p-4 shadow-sm animate-fade-in">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-green-100 text-green-800 shadow-inner">
+                  <TrendingUp className="h-4.5 w-4.5 stroke-[2]" />
+                </span>
+                <div className="flex-1">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-green-950">{arqueoPreview.label}</p>
+                  <p className="mt-0.5 text-2xl font-black tabular-nums text-green-600">
+                    +{formatCurrency(arqueoPreview.diff, currencySymbol)}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-green-800/90 leading-relaxed">{arqueoPreview.detail}</p>
+                </div>
               </div>
             ) : (
-              <div className="mt-3 rounded-lg border border-red-200 bg-red-50 px-3 py-2.5">
-                <p className="text-xs font-semibold uppercase tracking-wide text-red-800">{arqueoPreview.label}</p>
-                <p className="mt-1 text-2xl font-bold tabular-nums text-red-900">
-                  {formatCurrency(arqueoPreview.diff, currencySymbol)}
-                </p>
-                <p className="mt-1 text-xs text-red-800/95">{arqueoPreview.detail}</p>
+              <div className="mt-3.5 flex items-start gap-3 rounded-xl border border-rose-250 bg-rose-50/60 p-4 shadow-sm animate-fade-in">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-rose-100 text-rose-800 shadow-inner animate-pulse">
+                  <AlertTriangle className="h-4.5 w-4.5 stroke-[2]" />
+                </span>
+                <div className="flex-1">
+                  <p className="text-[10px] font-extrabold uppercase tracking-widest text-rose-950">{arqueoPreview.label}</p>
+                  <p className="mt-0.5 text-2xl font-black tabular-nums text-rose-600">
+                    {formatCurrency(arqueoPreview.diff, currencySymbol)}
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-rose-800/90 leading-relaxed">{arqueoPreview.detail}</p>
+                </div>
               </div>
             )}
           </div>
 
-          <button
-            type="submit"
-            disabled={processing || !isOnline}
-            title={offlineButtonTitle(isOnline)}
-            className="w-full rounded-xl bg-red-600 px-6 py-3 text-sm font-semibold text-white shadow-sm hover:bg-red-700 disabled:opacity-50 sm:w-auto"
-          >
-            Finalizar Turno
-          </button>
+          <div className="pt-2">
+            <button
+              type="submit"
+              disabled={processing || !isOnline}
+              title={offlineButtonTitle(isOnline)}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-rose-600 to-red-750 hover:from-rose-700 hover:to-red-800 py-3.5 text-xs font-extrabold uppercase tracking-widest text-white shadow-lg shadow-rose-600/10 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed sm:w-auto cursor-pointer"
+            >
+              <Lock className="h-4 w-4" />
+              Finalizar Turno y Cerrar
+            </button>
+          </div>
         </form>
       </article>
     );
@@ -166,3 +208,4 @@ export function CashierForms({
 
   return null;
 }
+

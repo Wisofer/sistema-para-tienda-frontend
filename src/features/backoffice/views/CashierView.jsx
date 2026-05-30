@@ -44,7 +44,7 @@ export function CashierView({ currencySymbol = "C$" }) {
   } = useCashier(currencySymbol);
 
   // Pantalla de carga inicial
-  if (loading) return <BackofficeListSkeletonLoading rows={5} maxWidth="4xl" />;
+  if (loading) return <BackofficeListSkeletonLoading rows={5} maxWidth="7xl" />;
 
   // Cálculos de resumen (Extraídos para claridad)
   const totalEfectivo =
@@ -76,13 +76,14 @@ export function CashierView({ currencySymbol = "C$" }) {
   const cajaAbierta = estado?.abierta || estado?.estado === "Abierto";
 
   return (
-    <BackofficePageShell maxWidth="4xl" className="space-y-5">
+    <BackofficePageShell maxWidth="7xl" className="space-y-6">
       {/* Mensaje de Error Global */}
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700 animate-in fade-in slide-in-from-top-2">
-          {error}
+        <div className="rounded-2xl border border-rose-200 bg-rose-50/60 p-4 text-xs font-extrabold uppercase tracking-wider text-rose-800 animate-in fade-in duration-300 shadow-sm shadow-rose-100/10">
+          ⚠️ {error}
         </div>
       )}
+
 
       {/* 1. Estado y Bienvenida */}
       <CashierStatusCards 

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DollarSign, KeyRound, Pencil, Trash2 } from "lucide-react";
+import { DollarSign, KeyRound, Pencil, Trash2, ShieldCheck, Sliders, MessageSquare, RefreshCw, Settings, Plus } from "lucide-react";
 import { backofficeApi } from "../services/backofficeApi.js";
 import { BackofficeDialog, BackofficeListSkeletonLoading, BackofficePageShell } from "../components/index.js";
 import { useAuth } from "../../../contexts/AuthContext.jsx";
@@ -9,7 +9,6 @@ import {
   modalFormBodyScrollClass,
   modalFormFooterClass,
   modalFormRootClass,
-  modalInputTouchClass,
 } from "../utils/modalResponsiveClasses.js";
 import { POS_EXCHANGE_RATE_UPDATED_EVENT } from "../constants/posEvents.js";
 import { tipoCambioInputTextFromApi } from "../utils/currency.js";
@@ -86,6 +85,9 @@ export function SettingsView() {
   /** Valor editado del tipo de cambio USD→C$ (mismo endpoint que el POS). */
   const [tipoCambioInput, setTipoCambioInput] = useState(() => tipoCambioInputTextFromApi(null));
   const [codigoCancelacionInput, setCodigoCancelacionInput] = useState("");
+
+  // Pestaña activa actual (Mac-like split screen navigation)
+  const [activeTab, setActiveTab] = useState("finanzas");
 
   const loadAll = async () => {
     const [config, tmpl, tc] = await Promise.all([
@@ -269,340 +271,433 @@ export function SettingsView() {
     }
   };
 
-  if (loading) return <BackofficeListSkeletonLoading rows={5} maxWidth="5xl" />;
+  const tabs = [
+    { id: "finanzas", label: "Moneda y Divisa", desc: "Tipo de cambio USD/NIO", icon: DollarSign },
+    { id: "seguridad", label: "Autorizaciones", desc: "PIN de cancelaciones", icon: KeyRound },
+    { id: "pos", label: "Preferencias POS", desc: "Alertas y sonidos", icon: Sliders },
+    { id: "whatsapp", label: "WhatsApp Marketing", desc: "Plantillas de facturación", icon: MessageSquare },
+    { id: "parametros", label: "Variables Críticas", desc: "Parámetros del sistema", icon: Settings },
+  ];
+
+  if (loading) return <BackofficeListSkeletonLoading rows={5} maxWidth="7xl" />;
   return (
-    <BackofficePageShell maxWidth="5xl" className="pb-8">
-      <p className="mb-6 text-sm text-slate-600">
-        Moneda, tipo de cambio, avisos de stock y plantillas de WhatsApp.
-      </p>
+    <BackofficePageShell maxWidth="7xl" className="pb-12">
+      
+      {/* HEADER DE BIENVENIDA */}
+      <div className="mb-6 border-b border-slate-100 pb-5">
+        <h1 className="text-xl font-extrabold tracking-tight text-slate-800">Ajustes Generales</h1>
+        <p className="text-xs text-slate-400 mt-1">Configuración del comportamiento comercial del punto de venta.</p>
+      </div>
 
       {error && (
-        <div className="mb-6 rounded-xl border border-red-100 bg-red-50 p-3 text-sm font-medium text-red-600 animate-in fade-in slide-in-from-top-2">
-          {error}
+        <div className="mb-6 rounded-2xl border border-rose-200 bg-rose-50/60 p-4 text-xs font-extrabold uppercase tracking-wider text-rose-800 animate-in fade-in duration-300">
+          ⚠️ {error}
         </div>
       )}
 
-      {/* Secciones en Columnas Limpias */}
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-12">
-        {/* Lado Izquierdo: General y POS */}
-        <div className="space-y-8 md:col-span-12 lg:col-span-7">
-          
-          <section className="grid grid-cols-1 gap-4">
-            <article className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-500">
-                  <span className="text-sm font-bold uppercase">{user?.nombreUsuario?.[0] || user?.usuario?.[0] || "U"}</span>
-                </div>
-                <div>
-                  <h3 className="text-sm font-bold text-slate-800">{user?.nombreUsuario || user?.usuario || "Usuario"}</h3>
-                  <p className="text-xs text-slate-500">{user?.rol || "Admin"}</p>
-                </div>
-              </div>
-            </article>
-          </section>
+      {/* DISPOSICIÓN MAC-LIKE PANEL DIVIDIDO */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+        
+        {/* COLUMNA IZQUIERDA: DOCK DE NAVEGACIÓN */}
+        <div className="lg:col-span-4 space-y-4">
+          <div className="flex items-center gap-3 rounded-2xl border border-slate-100 bg-slate-50/50 p-3 shadow-inner">
+            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-50 font-extrabold text-xs uppercase text-blue-600 shadow-inner">
+              {user?.nombreUsuario?.[0] || user?.usuario?.[0] || "U"}
+            </span>
+            <div className="min-w-0">
+              <p className="text-xs font-extrabold text-slate-800 tracking-tight">{user?.nombreUsuario || user?.usuario || "Usuario"}</p>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">{user?.rol || "Administrador"}</p>
+            </div>
+          </div>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
-                <DollarSign className="h-5 w-5" aria-hidden />
-              </div>
-              <h3 className="text-sm font-bold text-slate-800">Tipo de cambio (dólar)</h3>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="min-w-0 flex-1">
-                <label htmlFor="tipo-cambio-usd" className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500">
-                  1 USD = C$
-                </label>
-                <input
-                  id="tipo-cambio-usd"
-                  type="text"
-                  inputMode="decimal"
-                  value={tipoCambioInput}
-                  onChange={(e) => setTipoCambioInput(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold tabular-nums text-slate-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  placeholder={tipoCambioInputTextFromApi(null)}
-                  autoComplete="off"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => void saveTipoCambioDolar()}
-                disabled={saving}
-                className="shrink-0 rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
-              >
-                Guardar tipo de cambio
-              </button>
-            </div>
-          </section>
-
-          <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-50 text-amber-700">
-                <KeyRound className="h-5 w-5" aria-hidden />
-              </div>
-              <h3 className="text-sm font-bold text-slate-800">Código de devolución/cancelación</h3>
-            </div>
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="min-w-0 flex-1">
-                <label
-                  htmlFor="codigo-cancelacion-venta"
-                  className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-slate-500"
+          <nav className="flex flex-row overflow-x-auto gap-2 lg:flex-col lg:overflow-x-visible rounded-2xl border border-slate-100 bg-white p-2 shadow-sm hide-scrollbar">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              const isSelected = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex flex-1 items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-all duration-200 shrink-0 cursor-pointer ${
+                    isSelected
+                      ? "bg-blue-600 text-white shadow-md shadow-blue-600/10"
+                      : "bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+                  }`}
                 >
-                  PIN / código de confirmación
-                </label>
-                <input
-                  id="codigo-cancelacion-venta"
-                  type="password"
-                  autoComplete="new-password"
-                  value={codigoCancelacionInput}
-                  onChange={(e) => setCodigoCancelacionInput(e.target.value)}
-                  className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold tabular-nums text-slate-900 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-1 focus:ring-primary-500"
-                  placeholder="Ingresa código"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={() => void saveCodigoCancelacion()}
-                disabled={saving}
-                className="shrink-0 rounded-lg bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:opacity-50"
-              >
-                Guardar código
-              </button>
-            </div>
-          </section>
+                  <Icon className={`h-4.5 w-4.5 shrink-0 ${isSelected ? "text-white" : "text-slate-400"}`} />
+                  <div className="hidden lg:block min-w-0">
+                    <p className="text-xs font-extrabold tracking-tight leading-none">{tab.label}</p>
+                    <p className={`text-[9px] mt-0.5 ${isSelected ? "text-blue-100" : "text-slate-400"}`}>{tab.desc}</p>
+                  </div>
+                  <span className="block lg:hidden text-xs font-extrabold">{tab.label}</span>
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
-          {settings.length > 0 && (
-            <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-              <h3 className="mb-4 text-[11px] font-black uppercase tracking-widest text-slate-400">Parámetros del sistema</h3>
-              <ul className="divide-y divide-slate-100">
-                {settings.map((cfg, i) => {
-                  const clave = cfg?.clave ?? cfg?.Clave ?? `cfg-${i}`;
-                  const valor = cfg?.valor ?? cfg?.Valor ?? "";
-                  return (
-                    <li
-                      key={String(clave)}
-                      className="flex flex-col gap-2 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center sm:justify-between sm:gap-3"
-                    >
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-800">{clave}</p>
-                        <p className="truncate text-xs text-slate-500">{String(valor)}</p>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => openConfigEditor(cfg)}
-                        className="inline-flex shrink-0 items-center gap-1 rounded-lg border border-slate-200 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wide text-slate-700 hover:bg-slate-50"
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                        Editar
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </section>
-          )}
-
-          {/* Preferencias de POS */}
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="mb-5 text-[11px] font-black uppercase tracking-widest text-slate-400">Preferencias del POS</h3>
-            <div className="divide-y divide-slate-100">
-              {[
-                { label: "Alertas Stock Mínimo", desc: "Avisar cuando se agota", state: alertasStockMinimo, setter: setAlertasStockMinimo },
-                { label: "Sonidos de Notificación", desc: "Feedback auditivo (Vol 30%)", state: sonidosNotificacion, setter: setSonidosNotificacion }
-              ].map((pref, i) => (
-                <div key={i} className="flex items-center justify-between py-4 first:pt-0 last:pb-0">
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">{pref.label}</p>
-                    <p className="text-xs text-slate-500">{pref.desc}</p>
+        {/* COLUMNA DERECHA: ESPACIO DE TRABAJO ENFOCADO */}
+        <div className="lg:col-span-8 min-w-0">
+          <div className="rounded-2xl border border-slate-100 bg-white p-6 shadow-sm min-h-[420px] transition-all duration-300">
+            
+            {/* TIPO DE CAMBIO */}
+            {activeTab === "finanzas" && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Tipo de Cambio Cambiario</h3>
+                  <p className="text-xs font-semibold text-slate-400 mt-1">Control de la tasa de conversión para pagos recibidos en USD.</p>
+                </div>
+                
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-5 space-y-4 shadow-inner">
+                  <div className="max-w-md">
+                    <label htmlFor="tipo-cambio-usd" className="mb-2 block text-[9px] font-extrabold uppercase tracking-widest text-slate-450">
+                      Tasa de conversión base (1 USD = C$)
+                    </label>
+                    <div className="relative">
+                      <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-black text-slate-400">C$</span>
+                      <input
+                        id="tipo-cambio-usd"
+                        type="text"
+                        inputMode="decimal"
+                        value={tipoCambioInput}
+                        onChange={(e) => setTipoCambioInput(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-9 pr-3 text-sm font-black tabular-nums text-slate-800 focus:border-blue-500 focus:outline-none transition-all shadow-sm"
+                        placeholder={tipoCambioInputTextFromApi(null)}
+                        autoComplete="off"
+                      />
+                    </div>
                   </div>
                   <button
                     type="button"
-                    onClick={() => pref.setter(v => !v)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${pref.state ? "bg-slate-900" : "bg-slate-200"}`}
+                    onClick={() => void saveTipoCambioDolar()}
+                    disabled={saving}
+                    className="rounded-xl bg-blue-600 px-5 py-3 text-xs font-extrabold uppercase tracking-widest text-white hover:bg-blue-700 active:scale-95 transition-all cursor-pointer shadow-sm disabled:opacity-50"
                   >
-                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform ${pref.state ? "translate-x-6" : "translate-x-1"}`} />
+                    Guardar Cambios
                   </button>
                 </div>
-              ))}
-            </div>
-          </section>
+              </div>
+            )}
 
-        </div>
-
-        {/* Lado Derecho: WhatsApp */}
-        <div className="md:col-span-12 lg:col-span-5">
-          <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-            <div className="border-b border-slate-100 p-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="min-w-0">
-                  <h3 className="text-sm font-bold text-slate-800">WhatsApp Marketing</h3>
-                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Plantillas de Factura</p>
+            {/* SEGURIDAD */}
+            {activeTab === "seguridad" && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Código de Autorización</h3>
+                  <p className="text-xs font-semibold text-slate-400 mt-1">PIN confidencial para autorizar devoluciones y cancelaciones de ventas.</p>
                 </div>
-                <select
-                  value={templatesActivas}
-                  onChange={async (e) => {
-                    const v = e.target.value;
-                    setTemplatesActivas(v);
-                    await reloadTemplates(v);
-                  }}
-                  className="rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-slate-600"
-                >
-                  <option value="">Todas</option>
-                  <option value="true">Activas</option>
-                  <option value="false">Inactivas</option>
-                </select>
-              </div>
-            </div>
 
-            <div className="p-6">
-              <div className="mb-4 flex items-center justify-between">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Plantillas</p>
-                <button
-                  onClick={openTemplateCreate}
-                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-[10px] font-bold text-white active:scale-95 transition-all"
-                >
-                  + NUEVA
-                </button>
-              </div>
-
-              <div className="space-y-3">
-                {templates.length === 0 && (
-                  <div className="rounded-xl border border-dashed border-slate-200 py-10 text-center">
-                    <p className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Vacío</p>
+                <div className="rounded-2xl border border-slate-100 bg-slate-50/50 p-5 space-y-4 shadow-inner">
+                  <div className="max-w-md">
+                    <label
+                      htmlFor="codigo-cancelacion-venta"
+                      className="mb-2 block text-[9px] font-extrabold uppercase tracking-widest text-slate-450"
+                    >
+                      PIN / código secreto de confirmación
+                    </label>
+                    <div className="relative">
+                      <ShieldCheck className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4.5 w-4.5 text-slate-400" />
+                      <input
+                        id="codigo-cancelacion-venta"
+                        type="password"
+                        autoComplete="new-password"
+                        value={codigoCancelacionInput}
+                        onChange={(e) => setCodigoCancelacionInput(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm font-black tracking-widest text-slate-800 focus:border-blue-500 focus:outline-none transition-all shadow-sm"
+                        placeholder="••••••"
+                      />
+                    </div>
                   </div>
-                )}
-                {templates.map((t, i) => (
-                  <div key={t.id || i} className="rounded-xl border border-slate-100 bg-slate-50/50 p-4 transition-all hover:bg-white hover:shadow-sm">
-                    <div className="mb-3">
-                      <div className="flex items-center justify-between">
-                        <h4 className="flex items-center gap-1.5 text-xs font-bold text-slate-800">
-                          {t.nombre || "Sin Nombre"}
-                          {(t.predeterminada || t.esDefault) && (
-                            <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[8px] font-bold text-emerald-600 ring-1 ring-emerald-100">
-                              DEFAULT
-                            </span>
-                          )}
-                        </h4>
-                        <button onClick={() => setConfirmDeleteTemplate({ open: true, id: t.id })} className="text-slate-300 hover:text-red-500">
-                          <Trash2 className="h-4.5 w-4.5" />
+                  <button
+                    type="button"
+                    onClick={() => void saveCodigoCancelacion()}
+                    disabled={saving}
+                    className="rounded-xl bg-blue-600 px-5 py-3 text-xs font-extrabold uppercase tracking-widest text-white hover:bg-blue-700 active:scale-95 transition-all cursor-pointer shadow-sm disabled:opacity-50"
+                  >
+                    Actualizar Autorización
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* PREFERENCIAS POS */}
+            {activeTab === "pos" && (
+              <div className="space-y-6 animate-in fade-in duration-300">
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Configuración del Terminal</h3>
+                  <p className="text-xs font-semibold text-slate-400 mt-1">Comportamiento acústico y alertas del punto de venta.</p>
+                </div>
+
+                <div className="divide-y divide-slate-100 rounded-2xl border border-slate-100 bg-slate-50/30 overflow-hidden shadow-inner">
+                  {[
+                    { label: "Alertas de Stock Mínimo", desc: "Notificar en el POS cuando un producto se agote", state: alertasStockMinimo, setter: setAlertasStockMinimo },
+                    { label: "Sonidos de Notificación", desc: "Activar volumen acústico al escanear e imprimir tickets", state: sonidosNotificacion, setter: setSonidosNotificacion }
+                  ].map((pref, i) => (
+                    <div key={i} className="flex items-center justify-between gap-4 p-4.5 bg-white/60 hover:bg-white transition-all">
+                      <div>
+                        <p className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">{pref.label}</p>
+                        <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{pref.desc}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => pref.setter(v => !v)}
+                        className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors cursor-pointer ${pref.state ? "bg-blue-600" : "bg-slate-200"}`}
+                      >
+                        <span className={`inline-block h-4.5 w-4.5 transform rounded-full bg-white transition-transform ${pref.state ? "translate-x-5.5" : "translate-x-1"}`} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* WHATSAPP MARKETING */}
+            {activeTab === "whatsapp" && (
+              <div className="space-y-5 animate-in fade-in duration-300">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">WhatsApp Facturación</h3>
+                    <p className="text-xs font-semibold text-slate-400 mt-1">Mensajería y mercadeo automatizado de tickets.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <select
+                      value={templatesActivas}
+                      onChange={async (e) => {
+                        const v = e.target.value;
+                        setTemplatesActivas(v);
+                        await reloadTemplates(v);
+                      }}
+                      className="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[9px] font-black uppercase tracking-widest text-slate-550 shadow-sm cursor-pointer"
+                    >
+                      <option value="">Todas</option>
+                      <option value="true">Activas</option>
+                      <option value="false">Inactivas</option>
+                    </select>
+                    <button
+                      onClick={openTemplateCreate}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-3.5 py-2 text-[9px] font-black uppercase tracking-widest text-white hover:bg-blue-700 active:scale-95 transition-all cursor-pointer shadow-sm"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Nueva Plantilla
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-4 max-h-[380px] overflow-y-auto pr-1 hide-scrollbar">
+                  {templates.length === 0 && (
+                    <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center bg-slate-50/20">
+                      <p className="text-xs font-semibold text-slate-400">No hay plantillas de WhatsApp registradas.</p>
+                    </div>
+                  )}
+                  {templates.map((t, i) => (
+                    <div key={t.id || i} className="rounded-2xl border border-slate-100 bg-slate-50/40 p-4 transition-all hover:bg-white hover:shadow-sm">
+                      <div className="mb-3">
+                        <div className="flex items-center justify-between">
+                          <h4 className="flex items-center gap-1.5 text-xs font-extrabold text-slate-800 uppercase tracking-wide">
+                            {t.nombre || "Plantilla"}
+                            {(t.predeterminada || t.esDefault) && (
+                              <span className="rounded bg-emerald-50 px-1.5 py-0.5 text-[8px] font-black text-emerald-600 border border-emerald-100 shadow-inner">
+                                ACTIVA DEFAULT
+                              </span>
+                            )}
+                          </h4>
+                          <button onClick={() => setConfirmDeleteTemplate({ open: true, id: t.id })} className="text-slate-350 hover:text-rose-500 active:scale-90 transition-all cursor-pointer p-0.5">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <p className="mt-2 text-[10px] leading-relaxed text-slate-550 font-semibold">
+                          {t.contenido || t.mensaje || "Mensaje vacío..."}
+                        </p>
+                      </div>
+                      <div className="flex gap-3 border-t border-slate-100/50 pt-2.5">
+                        <button onClick={() => openTemplateEdit(t.id)} className="text-[9px] font-black uppercase tracking-widest text-slate-600 hover:text-slate-900 cursor-pointer">
+                          Editar
+                        </button>
+                        <button onClick={() => makeDefaultTemplate(t.id)} className="text-[9px] font-black uppercase tracking-widest text-emerald-600 hover:text-emerald-700 cursor-pointer">
+                          Establecer Default
                         </button>
                       </div>
-                      <p className="mt-1 line-clamp-2 text-[11px] leading-relaxed text-slate-500">
-                        {t.contenido || t.mensaje || "Sin contenido..."}
-                      </p>
                     </div>
-                    <div className="flex gap-2">
-                      <button onClick={() => openTemplateEdit(t.id)} className="text-[10px] font-bold text-slate-600 hover:text-slate-900">
-                        EDITAR
-                      </button>
-                      <button onClick={() => makeDefaultTemplate(t.id)} className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700">
-                        DEFAULT
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
-          </section>
+            )}
+
+            {/* VARIABLES CRÍTICAS */}
+            {activeTab === "parametros" && (
+              <div className="space-y-5 animate-in fade-in duration-300">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Parámetros del Sistema</h3>
+                    <p className="text-xs font-semibold text-slate-400 mt-1">Valores internos guardados directamente en la base de datos.</p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={loadAll}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 hover:text-slate-800 active:scale-95 transition-all cursor-pointer shadow-sm"
+                  >
+                    <RefreshCw className="h-4.5 w-4.5" />
+                  </button>
+                </div>
+
+                <div className="space-y-3 max-h-[380px] overflow-y-auto pr-1 hide-scrollbar">
+                  {settings.map((cfg, i) => {
+                    const clave = cfg?.clave ?? cfg?.Clave ?? `cfg-${i}`;
+                    const valor = cfg?.valor ?? cfg?.Valor ?? "";
+                    return (
+                      <div
+                        key={String(clave)}
+                        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4 rounded-2xl border border-slate-100 bg-slate-50/30 hover:bg-slate-50/60 transition-all duration-200"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="text-xs font-extrabold text-slate-800 uppercase tracking-wider">{clave}</p>
+                          <p className="text-[11px] font-extrabold text-slate-500 mt-1 font-mono truncate bg-white border border-slate-100 rounded-lg px-2 py-1 shadow-inner">
+                            {String(valor)}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => openConfigEditor(cfg)}
+                          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-[9px] font-black uppercase tracking-widest text-slate-700 hover:bg-slate-50 cursor-pointer shadow-sm"
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Editar
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+          </div>
         </div>
+
       </div>
 
+      {/* DIÁLOGO EDICIÓN CONFIGURACIONES */}
       {modalOpen && (
         <BackofficeDialog maxWidthClass="max-w-md" onBackdropClick={saving ? undefined : () => setModalOpen(false)}>
           <form onSubmit={saveConfig} className={modalFormRootClass}>
-            <h3 className="shrink-0 text-lg font-semibold text-slate-800">Editar configuración</h3>
-            <div className={modalFormBodyScrollClass}>
-              <input
-                value={configForm.clave}
-                onChange={(e) => setConfigForm((f) => ({ ...f, clave: e.target.value }))}
-                placeholder="Clave"
-                className={modalInputTouchClass}
-                required
-              />
-              <input
-                value={configForm.valor}
-                onChange={(e) => setConfigForm((f) => ({ ...f, valor: e.target.value }))}
-                placeholder="Valor"
-                className={modalInputTouchClass}
-                required
-              />
-              <textarea
-                value={configForm.descripcion}
-                onChange={(e) => setConfigForm((f) => ({ ...f, descripcion: e.target.value }))}
-                placeholder="Descripción (opcional)"
-                className={modalInputTouchClass}
-                rows={3}
-              />
+            <div className="border-b border-slate-100 pb-3 mb-4">
+              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">Editar parámetro operacional</h3>
+              <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Modificación directa de la clave de configuración.</p>
             </div>
-            <div className={modalFormFooterClass}>
-              <button type="button" onClick={() => setModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 sm:w-auto">
+            <div className={modalFormBodyScrollClass + " space-y-4"}>
+              <div>
+                <label className="mb-1 block text-[9px] font-extrabold uppercase tracking-widest text-slate-450">Clave del sistema *</label>
+                <input
+                  value={configForm.clave}
+                  onChange={(e) => setConfigForm((f) => ({ ...f, clave: e.target.value }))}
+                  placeholder="Clave"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3.5 text-xs font-semibold focus:border-blue-500 focus:outline-none transition-all"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[9px] font-extrabold uppercase tracking-widest text-slate-450">Valor *</label>
+                <input
+                  value={configForm.valor}
+                  onChange={(e) => setConfigForm((f) => ({ ...f, valor: e.target.value }))}
+                  placeholder="Valor"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3.5 text-xs font-semibold focus:border-blue-500 focus:outline-none transition-all"
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-[9px] font-extrabold uppercase tracking-widest text-slate-450">Descripción (opcional)</label>
+                <textarea
+                  value={configForm.descripcion}
+                  onChange={(e) => setConfigForm((f) => ({ ...f, descripcion: e.target.value }))}
+                  placeholder="Descripción de la variable..."
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3.5 text-xs font-semibold focus:border-blue-500 focus:outline-none transition-all"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className={modalFormFooterClass + " border-t border-slate-100 pt-4 mt-5 flex justify-end gap-3"}>
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-xs font-extrabold uppercase tracking-widest text-slate-550 hover:bg-slate-50 cursor-pointer">
                 Cancelar
               </button>
-              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">
+              <button disabled={saving} className="rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-widest text-white disabled:opacity-50 hover:bg-blue-700 cursor-pointer shadow-md">
                 {saving ? "Guardando..." : "Guardar"}
               </button>
             </div>
           </form>
         </BackofficeDialog>
       )}
+
+      {/* DIÁLOGO WHATSAPP TEMPLATE */}
       {templateModalOpen && (
         <BackofficeDialog maxWidthClass="max-w-lg" onBackdropClick={saving ? undefined : () => setTemplateModalOpen(false)}>
           <form onSubmit={saveTemplate} className={modalFormRootClass}>
-            <h3 className="shrink-0 text-lg font-semibold text-slate-800">
-              {templateForm.id ? "Editar plantilla WhatsApp" : "Nueva plantilla WhatsApp"}
-            </h3>
-            <div className={modalFormBodyScrollClass}>
+            <div className="border-b border-slate-100 pb-3 mb-4">
+              <h3 className="text-sm font-extrabold text-slate-800 uppercase tracking-wider">
+                {templateForm.id ? "Editar plantilla WhatsApp" : "Nueva plantilla WhatsApp"}
+              </h3>
+              <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Personalización de facturas enviadas automáticamente por WhatsApp.</p>
+            </div>
+            <div className={modalFormBodyScrollClass + " space-y-4"}>
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Nombre *</label>
+                <label className="mb-1 block text-[9px] font-extrabold uppercase tracking-widest text-slate-450">Nombre descriptivo *</label>
                 <input
                   value={templateForm.nombre}
                   onChange={(e) => setTemplateForm((f) => ({ ...f, nombre: e.target.value }))}
                   placeholder="Ej: Plantilla por Defecto"
-                  className={modalInputTouchClass}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3.5 text-xs font-semibold focus:border-blue-500 focus:outline-none transition-all"
                   required
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-600">Mensaje *</label>
+                <label className="mb-1 block text-[9px] font-extrabold uppercase tracking-widest text-slate-450">Mensaje de Factura *</label>
                 <textarea
                   value={templateForm.contenido}
                   onChange={(e) => setTemplateForm((f) => ({ ...f, contenido: e.target.value }))}
                   placeholder={"Hola {NombreCliente},\n\nLe enviamos su factura:\n📄 Factura: {NumeroFactura}\n💰 Monto: C$ {Monto}\n..."}
-                  className={modalInputTouchClass}
-                  rows={8}
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 px-3.5 text-xs font-semibold focus:border-blue-500 focus:outline-none transition-all font-mono leading-relaxed"
+                  rows={6}
                   required
                 />
-                <p className="mt-1 text-xs text-slate-500">
-                  Usa las variables: {"{NombreCliente}"}, {"{NumeroFactura}"}, {"{Monto}"}, {"{Mes}"}, {"{Categoria}"}, {"{Estado}"}, {"{EnlacePDF}"}
-                </p>
-                <p className="mt-1 text-xs text-primary-700">
-                  Puedes personalizar el mensaje libremente y dejar solo las variables que necesites.
-                </p>
+                <div className="mt-2.5 rounded-xl border border-indigo-100 bg-indigo-50/50 p-3 text-[10px] font-semibold text-indigo-700 leading-relaxed">
+                  Variables dinámicas soportadas: <br />
+                  <span className="font-mono bg-white border border-indigo-150 px-1 py-0.5 rounded text-[9px]">{"{NombreCliente}"}</span>,{" "}
+                  <span className="font-mono bg-white border border-indigo-150 px-1 py-0.5 rounded text-[9px]">{"{NumeroFactura}"}</span>,{" "}
+                  <span className="font-mono bg-white border border-indigo-150 px-1 py-0.5 rounded text-[9px]">{"{Monto}"}</span>,{" "}
+                  <span className="font-mono bg-white border border-indigo-150 px-1 py-0.5 rounded text-[9px]">{"{Mes}"}</span>,{" "}
+                  <span className="font-mono bg-white border border-indigo-150 px-1 py-0.5 rounded text-[9px]">{"{Categoria}"}</span>,{" "}
+                  <span className="font-mono bg-white border border-indigo-150 px-1 py-0.5 rounded text-[9px]">{"{Estado}"}</span>,{" "}
+                  <span className="font-mono bg-white border border-indigo-150 px-1 py-0.5 rounded text-[9px]">{"{EnlacePDF}"}</span>
+                </div>
               </div>
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                <input type="checkbox" checked={templateForm.activa} onChange={(e) => setTemplateForm((f) => ({ ...f, activa: e.target.checked }))} />
-                Activa
-              </label>
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={templateForm.predeterminada}
-                  onChange={(e) => setTemplateForm((f) => ({ ...f, predeterminada: e.target.checked }))}
-                />
-                Marcar como predeterminada
-              </label>
+              <div className="flex flex-col gap-2 pt-2">
+                <label className="inline-flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer">
+                  <input type="checkbox" checked={templateForm.activa} onChange={(e) => setTemplateForm((f) => ({ ...f, activa: e.target.checked }))} className="h-4 w-4 rounded border-slate-200 text-indigo-650" />
+                  Activar plantilla
+                </label>
+                <label className="inline-flex items-center gap-2.5 text-xs font-bold text-slate-700 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={templateForm.predeterminada}
+                    onChange={(e) => setTemplateForm((f) => ({ ...f, predeterminada: e.target.checked }))}
+                    className="h-4 w-4 rounded border-slate-200 text-indigo-650"
+                  />
+                  Marcar como predeterminada (Default)
+                </label>
+              </div>
             </div>
-            <div className={modalFormFooterClass}>
-              <button type="button" onClick={() => setTemplateModalOpen(false)} className="w-full rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 sm:w-auto">
+            <div className={modalFormFooterClass + " border-t border-slate-100 pt-4 mt-5 flex justify-end gap-3"}>
+              <button type="button" onClick={() => setTemplateModalOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-xs font-extrabold uppercase tracking-widest text-slate-550 hover:bg-slate-50 cursor-pointer">
                 Cancelar
               </button>
-              <button disabled={saving} className="w-full rounded-lg bg-primary-600 px-3 py-2.5 text-xs font-semibold text-white disabled:opacity-50 sm:w-auto">
+              <button disabled={saving} className="rounded-lg bg-blue-600 px-5 py-2.5 text-xs font-extrabold uppercase tracking-widest text-white disabled:opacity-50 hover:bg-blue-700 cursor-pointer shadow-md">
                 {saving ? "Guardando..." : "Guardar"}
               </button>
             </div>
           </form>
         </BackofficeDialog>
       )}
+
       <ConfirmModal
         open={confirmDeleteTemplate.open}
         onClose={() => setConfirmDeleteTemplate({ open: false, id: null })}

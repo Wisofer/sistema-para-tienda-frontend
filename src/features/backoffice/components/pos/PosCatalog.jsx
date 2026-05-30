@@ -52,77 +52,76 @@ export function PosCatalog({
         const bloqueadoPorCaja = !cajaAbierta;
         const disabled = bloqueadoPorCaja || actionBusy || sinStock;
         return (
-        <button
-          key={p.id}
-          onClick={() => addToCart(p)}
-          disabled={disabled}
-          title={
-            bloqueadoPorCaja
-              ? "Bloqueado por caja cerrada"
-              : sinStock
-              ? "Sin stock disponible"
-              : undefined
-          }
-          className="group relative flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 active:scale-[0.96] disabled:opacity-50"
-        >
-          {bloqueadoPorCaja && (
-            <div className="absolute inset-0 z-10 rounded-2xl bg-slate-900/5">
-              <div className="absolute left-2 top-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-amber-900 shadow-sm">
-                Bloqueado por caja cerrada
+          <button
+            key={p.id}
+            onClick={() => addToCart(p)}
+            disabled={disabled}
+            title={
+              bloqueadoPorCaja
+                ? "Bloqueado por caja cerrada"
+                : sinStock
+                  ? "Sin stock disponible"
+                  : undefined
+            }
+            className="group relative flex flex-col justify-between rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:border-blue-200 hover:shadow-xl hover:-translate-y-1 active:scale-[0.96] disabled:opacity-50"
+          >
+            {bloqueadoPorCaja && (
+              <div className="absolute inset-0 z-10 rounded-2xl bg-slate-900/5">
+                <div className="absolute left-2 top-2 rounded-lg border border-amber-200 bg-amber-50 px-2 py-1 text-[9px] font-black uppercase tracking-widest text-amber-900 shadow-sm">
+                  Bloqueado por caja cerrada
+                </div>
               </div>
-            </div>
-          )}
-          {/* Imagen con Aspect Ratio controlado */}
-          <div className="mb-3 aspect-square w-full overflow-hidden rounded-xl bg-slate-50 flex items-center justify-center ring-1 ring-slate-50">
-            {p.imagen ? (
-              <img
-                src={p.imagen}
-                alt={p.nombre}
-                className="h-full w-full object-cover object-top transition-transform duration-700 group-hover:scale-110"
-                onError={(e) => {
-                  e.target.onerror = null;
-                  e.target.parentNode.innerHTML = '<div class="flex items-center justify-center h-full w-full text-slate-300"><svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>';
-                }}
-                loading="lazy"
-              />
-            ) : (
-              <ImageIcon className="h-8 w-8 text-slate-300" />
             )}
-          </div>
+            {/* Imagen con Aspect Ratio controlado */}
+            <div className="mb-3 aspect-square w-full overflow-hidden rounded-xl bg-slate-50 flex items-center justify-center ring-1 ring-slate-50">
+              {p.imagen ? (
+                <img
+                  src={p.imagen}
+                  alt={p.nombre}
+                  className="h-full w-full object-cover object-top transition-transform duration-700 group-hover:scale-110"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.parentNode.innerHTML = '<div class="flex items-center justify-center h-full w-full text-slate-300"><svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg></div>';
+                  }}
+                  loading="lazy"
+                />
+              ) : (
+                <ImageIcon className="h-8 w-8 text-slate-300" />
+              )}
+            </div>
 
-          {/* Información del Producto */}
-          <div className="flex flex-1 flex-col text-left">
-            <p className="line-clamp-1 text-[11px] font-black text-slate-600 uppercase tracking-tight">
-              {p.nombre || "Producto"}
-            </p>
-            <div className="mt-2 flex items-center justify-between">
-              <div>
-                <p className="text-sm font-black text-blue-600 tracking-tighter">
-                  {formatCurrency(p.precioVenta ?? p.precio ?? 0, currencySymbol)}
-                </p>
-                <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+            {/* Información del Producto */}
+            <div className="flex flex-1 flex-col text-left">
+              <p className="line-clamp-1 text-[11px] font-black text-slate-600 uppercase tracking-tight">
+                {p.nombre || "Producto"}
+              </p>
+              <div className="mt-2 flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-black text-blue-600 tracking-tighter">
+                    {formatCurrency(p.precioVenta ?? p.precio ?? 0, currencySymbol)}
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
                     {Array.isArray(p.variantes) && p.variantes.length > 1 && (
                       <span className="rounded bg-amber-100 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-amber-800">
                         Varias tallas
                       </span>
                     )}
-                    <span 
-                        className={`text-[8px] font-black uppercase tracking-widest ${
-                            p.stock <= 5 ? "text-red-600 animate-pulse" : "text-slate-400"
+                    <span
+                      className={`text-[8px] font-black uppercase tracking-widest ${p.stock <= 5 ? "text-red-600 animate-pulse" : "text-slate-400"
                         }`}
                     >
-                        Stock: {p.stock}
+                      Stock: {p.stock}
                     </span>
                     {p.talla && (
-                        <span className="rounded bg-slate-100 px-1 text-[8px] font-bold text-slate-500">
-                            {p.talla}
-                        </span>
+                      <span className="rounded bg-slate-100 px-1 text-[8px] font-bold text-slate-500">
+                        {p.talla}
+                      </span>
                     )}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        </button>
+          </button>
         );
       })}
     </div>
